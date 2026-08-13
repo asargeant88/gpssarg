@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, Check, Crosshair, MapPin, Compass, Layers } from 'lucide-react';
-import { formatAllCoordinates } from '../utils/coordinateConverter';
+import { formatAllCoordinates, fetchDlsPolygons } from '../utils/coordinateConverter';
 
 export default function CoordinateHUD({
   cursorPos,
@@ -11,10 +11,25 @@ export default function CoordinateHUD({
   onPinCurrentLocation
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
+  const [officialDls, setOfficialDls] = useState(null);
+
+  useEffect(() => {
+    if (!cursorPos || cursorPos.lat == null || cursorPos.lng == null) return;
+    let isCurrent = true;
+    fetchDlsPolygons(cursorPos.lat, cursorPos.lng)
+      .then(res => {
+        if (isCurrent && res && res.dls) {
+          setOfficialDls(res.dls);
+        }
+      })
+      .catch(() => {});
+    return () => { isCurrent = false; };
+  }, [cursorPos?.lat, cursorPos?.lng]);
 
   if (!cursorPos) return null;
 
   const formatted = formatAllCoordinates(cursorPos.lat, cursorPos.lng);
+  const dlsDisplay = officialDls || formatted.dls;
 
   const handleCopy = (text, key) => {
     navigator.clipboard.writeText(text);
@@ -43,9 +58,9 @@ export default function CoordinateHUD({
         {/* Primary Ticker Grid */}
         <div className="hud-metrics-row">
           {/* DLS / LSD */}
-          <div className="hud-metric-item highlight-dls" onClick={() => handleCopy(formatted.dls.formatted, 'dls')}>
+          <div className="hud-metric-item highlight-dls" onClick={() => handleCopy(dlsDisplay.formatted, 'dls')}>
             <span className="hud-label text-amber-400">DLS / LSD (ATS)</span>
-            <span className="hud-value mono text-amber-300">{formatted.dls.isValid ? formatted.dls.shortFormatted : 'N/A'}</span>
+            <span className="hud-value mono text-amber-300">{dlsDisplay.isValid ? dlsDisplay.shortFormatted : 'N/A'}</span>
             <button className="hud-copy-btn" title="Copy DLS">
               {copiedKey === 'dls' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
