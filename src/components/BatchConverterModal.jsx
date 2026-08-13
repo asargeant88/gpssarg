@@ -35,7 +35,9 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
     if (!isOpen) return;
 
     const lines = rawInput.split('\n').map(l => l.trim()).filter(Boolean);
-    const convertedList = lines.map((line, idx) => {
+    let isCurrent = true;
+
+    const initialList = lines.map((line, idx) => {
       // 1. Try DLS parser
       const dlsParsed = dlsToDd(line);
       if (dlsParsed && dlsParsed.isValid) {
@@ -45,7 +47,7 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
           rawInput: line,
           lat: dlsParsed.lat,
           lng: dlsParsed.lng,
-          dlsStr: coords.dls.formatted ? coords.dls.shortFormatted : line.toUpperCase(),
+          dlsStr: coords.dls.isValid ? coords.dls.shortFormatted : line.toUpperCase(),
           ddStr: coords.dd.formatted,
           dmsStr: coords.dms.formatted,
           utmStr: coords.utm.formatted,
@@ -54,7 +56,7 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
         };
       }
 
-      // 2. Try general location parser (DD, MGRS, etc)
+      // 2. Try general location parser (DD, MGRS, UTM, etc)
       const parsed = parseLocationInput(line);
       if (parsed && (parsed.lat != null && parsed.lng != null)) {
         const coords = formatAllCoordinates(parsed.lat, parsed.lng);
@@ -86,7 +88,29 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
       };
     });
 
-    setResults(convertedList);
+    setResults(initialList);
+
+    // Asynchronously fetch official government ATS DLS attributes for all valid batch coordinates
+    Promise.all(
+      initialList.map(async (item) => {
+        if (!item.isValid || item.lat == null || item.lng == null) return item;
+        try {
+          const res = await fetchDlsPolygons(item.lat, item.lng);
+          if (res && res.dls && res.dls.isValid) {
+            return {
+              ...item,
+              dlsStr: res.dls.shortFormatted,
+              officialDls: res.dls
+            };
+          }
+        } catch (e) {}
+        return item;
+      })
+    ).then((officialList) => {
+      if (isCurrent) setResults(officialList);
+    });
+
+    return () => { isCurrent = false; };
   }, [rawInput, isOpen]);
 
   if (!isOpen) return null;
@@ -163,10 +187,11 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
 
     const newWaypoints = validResults.map(r => ({
       id: Date.now() + Math.random(),
-      title: r.dlsStr !== 'N/A' ? `Batch: ${r.dlsStr}` : `Batch Point ${r.id}`,
+      title: r.dlsStr !== 'N/A' ? `LSD ${r.dlsStr}` : `Batch Point ${r.id}`,
       notes: `Batch converted from '${r.rawInput}' (${r.ddStr})`,
       lat: r.lat,
       lng: r.lng,
+      dls: r.officialDls,
       color: '#38bdf8',
       category: 'Batch Converted'
     }));

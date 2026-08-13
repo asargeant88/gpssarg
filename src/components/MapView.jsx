@@ -421,6 +421,7 @@ export default function MapView({
         {/* Saved Waypoint Markers */}
         {waypoints.map((wp) => {
           const coords = formatAllCoordinates(wp.lat, wp.lng);
+          const dlsInfo = wp.dls || coords.dls;
           return (
             <Marker
               key={wp.id}
@@ -436,10 +437,10 @@ export default function MapView({
                   {wp.notes && <p className="popup-notes">{wp.notes}</p>}
                   
                   <div className="popup-coords-box">
-                    {coords.dls.isValid && (
+                    {dlsInfo.isValid && (
                       <div className="popup-coord-row">
                         <span className="popup-label text-amber-400">DLS / LSD:</span>
-                        <span className="popup-value mono text-amber-300">{coords.dls.shortFormatted}</span>
+                        <span className="popup-value mono text-amber-300">{dlsInfo.shortFormatted}</span>
                       </div>
                     )}
                     <div className="popup-coord-row">
