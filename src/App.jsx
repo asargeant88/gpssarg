@@ -24,63 +24,10 @@ export default function App() {
   const [autoAddOnClick, setAutoAddOnClick] = useState(false);
 
   // Waypoints state
-  const [waypoints, setWaypoints] = useState([
-    {
-      id: 1,
-      title: 'Calgary Tower Benchmark',
-      notes: 'Urban spatial reference node',
-      lat: 51.0447,
-      lng: -114.0719,
-      color: '#38bdf8',
-      category: 'Benchmark'
-    },
-    {
-      id: 2,
-      title: 'Edmonton Capital Station',
-      notes: 'Alberta Provincial Capital Station',
-      lat: 53.5461,
-      lng: -113.4938,
-      color: '#34d399',
-      category: 'Survey'
-    },
-    {
-      id: 3,
-      title: 'Golden Gate Observation Pt',
-      notes: 'High elevation vista over SF Bay',
-      lat: 37.8199,
-      lng: -122.4783,
-      color: '#a855f7',
-      category: 'Landmark'
-    }
-  ]);
+  const [waypoints, setWaypoints] = useState([]);
 
   // Geotagged Media state
-  const [photos, setPhotos] = useState([
-    {
-      id: 101,
-      title: 'Golden Gate Viewpoint',
-      filename: 'IMG_2026_SF_BAY.JPG',
-      url: 'https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?q=80&w=800&auto=format&fit=crop',
-      lat: 37.8199,
-      lng: -122.4783,
-      date: '2026-08-12 16:45:10',
-      altitude: '65m MSL',
-      heading: '210° SW',
-      camera: 'SargGeo Spatial Cam'
-    },
-    {
-      id: 102,
-      title: 'Downtown Skyline Survey',
-      filename: 'IMG_2026_SKYLINE.JPG',
-      url: 'https://images.unsplash.com/photo-1477959858617-67f30ac4ce71?q=80&w=800&auto=format&fit=crop',
-      lat: 37.7952,
-      lng: -122.4028,
-      date: '2026-08-11 11:20:30',
-      altitude: '180m MSL',
-      heading: '095° E',
-      camera: 'SargGeo Spatial Cam'
-    }
-  ]);
+  const [photos, setPhotos] = useState([]);
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
@@ -154,6 +101,10 @@ export default function App() {
     setActiveTab('saved');
   };
 
+  const handleUploadPhoto = (newPhoto) => {
+    setPhotos((prev) => [newPhoto, ...prev]);
+  };
+
   return (
     <div className="sarggeo-app-container">
       {/* Sidebar Control Panel (GridAtlas style) */}
@@ -170,6 +121,7 @@ export default function App() {
         onAddWaypoint={handleAddWaypoint}
         onDeleteWaypoint={handleDeleteWaypoint}
         photos={photos}
+        onUploadPhoto={handleUploadPhoto}
         onSelectPhoto={(ph) => setSelectedPhoto(ph)}
         onFlyTo={handleFlyTo}
         measurePoints={measurePoints}

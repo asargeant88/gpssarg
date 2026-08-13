@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import ExifReader from 'exifreader';
 import {
   Search,
   RefreshCw,
@@ -20,7 +21,7 @@ import {
   Info
 } from 'lucide-react';
 import SargGeoLogo from './SargGeoLogo';
-import { formatAllCoordinates, parseLocationInput } from '../utils/coordinateConverter';
+import { formatAllCoordinates, parseLocationInput, fetchDlsPolygons } from '../utils/coordinateConverter';
 
 export default function Sidebar({
   activeTab,
@@ -50,15 +51,148 @@ export default function Sidebar({
   const [searchError, setSearchError] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // Converter state
-  const [converterInput, setConverterInput] = useState('37.7749, -122.4194');
-  const [converterCoords, setConverterCoords] = useState(formatAllCoordinates(37.7749, -122.4194));
+  // Converter state - dynamically synced to active map location
+  const initialLat = activeCursorPos ? activeCursorPos.lat : 51.0447;
+  const initialLng = activeCursorPos ? activeCursorPos.lng : -114.0719;
+  const [converterInput, setConverterInput] = useState(`${initialLat.toFixed(6)}, ${initialLng.toFixed(6)}`);
+  const [converterCoords, setConverterCoords] = useState(formatAllCoordinates(initialLat, initialLng));
   const [copiedKey, setCopiedKey] = useState(null);
+
+  // Sync converter tab when active map location changes
+  useEffect(() => {
+    if (!activeCursorPos || activeCursorPos.lat == null || activeCursorPos.lng == null) return;
+    const lat = activeCursorPos.lat;
+    const lng = activeCursorPos.lng;
+    setConverterInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    const coords = formatAllCoordinates(lat, lng);
+    setConverterCoords(coords);
+
+    let isCurrent = true;
+    fetchDlsPolygons(lat, lng)
+      .then(res => {
+        if (isCurrent && res && res.dls) {
+          setConverterCoords(prev => ({ ...prev, dls: res.dls }));
+        }
+      })
+      .catch(() => {});
+
+    return () => { isCurrent = false; };
+  }, [activeCursorPos?.lat, activeCursorPos?.lng]);
 
   // Waypoint form state
   const [newWpTitle, setNewWpTitle] = useState('');
   const [newWpNotes, setNewWpNotes] = useState('');
   const [newWpColor, setNewWpColor] = useState('#38bdf8');
+
+  // Media / Photo EXIF Upload state & refs
+  const fileInputRef = useRef(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isProcessingExif, setIsProcessingExif] = useState(false);
+  const [uploadStatusMsg, setUploadStatusMsg] = useState('');
+
+  // Process files for EXIF GPS metadata
+  const processFilesForExif = async (fileList) => {
+    if (!fileList || fileList.length === 0) return;
+
+    setIsProcessingExif(true);
+    setUploadStatusMsg('Extracting EXIF metadata...');
+    let addedCount = 0;
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      if (!file.type.startsWith('image/')) continue;
+
+      let lat = null;
+      let lng = null;
+      let altitude = 'Ground level';
+
+      let hasExifGps = false;
+      try {
+        const tags = await ExifReader.load(file);
+        console.log('EXIF tags extracted for', file.name, tags);
+
+        if (tags && tags.GPSLatitude && tags.GPSLongitude) {
+          const latVal = tags.GPSLatitude.description;
+          const lngVal = tags.GPSLongitude.description;
+
+          lat = typeof latVal === 'number' ? latVal : parseFloat(latVal);
+          lng = typeof lngVal === 'number' ? lngVal : parseFloat(lngVal);
+
+          if (tags.GPSLatitudeRef && (tags.GPSLatitudeRef.value[0] === 'S' || tags.GPSLatitudeRef.value === 'South')) {
+            lat = -Math.abs(lat);
+          }
+          if (tags.GPSLongitudeRef && (tags.GPSLongitudeRef.value[0] === 'W' || tags.GPSLongitudeRef.value === 'West')) {
+            lng = -Math.abs(lng);
+          }
+
+          if (tags.GPSAltitude) {
+            altitude = `${tags.GPSAltitude.description}m MSL`;
+          }
+
+          hasExifGps = true;
+        }
+      } catch (err) {
+        console.warn('EXIF read error for file', file.name, err);
+      }
+
+      // If no GPS tags present in file header, tag to active cursor/map position
+      if (lat == null || isNaN(lat) || lng == null || isNaN(lng)) {
+        lat = activeCursorPos ? activeCursorPos.lat : 51.0447;
+        lng = activeCursorPos ? activeCursorPos.lng : -114.0719;
+      }
+
+      const imageUrl = URL.createObjectURL(file);
+      const newPhoto = {
+        id: Date.now() + i,
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        filename: file.name,
+        url: imageUrl,
+        lat,
+        lng,
+        date: new Date(file.lastModified).toLocaleString(),
+        altitude,
+        heading: '0° N',
+        camera: hasExifGps ? 'EXIF Embedded GPS' : 'Tagged to Map Cursor (No EXIF)'
+      };
+
+      if (onUploadPhoto) {
+        onUploadPhoto(newPhoto);
+        addedCount++;
+      }
+
+      if (i === 0) {
+        onFlyTo(lat, lng);
+      }
+    }
+
+    setIsProcessingExif(false);
+    setUploadStatusMsg(`Added ${addedCount} photo(s)!`);
+    setTimeout(() => setUploadStatusMsg(''), 3500);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFilesForExif(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFilesForExif(e.target.files);
+    }
+  };
 
   // Handle Search Submission
   const handleSearchSubmit = async (e) => {
@@ -568,22 +702,55 @@ export default function Sidebar({
               <h3 className="pane-title">Geotagged Photo Gallery</h3>
               <p className="pane-desc">Inspect photos geotagged with spatial EXIF coordinates.</p>
 
-              <div className="upload-box">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                multiple
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+
+              <div
+                className={`upload-box ${isDragOver ? 'drag-over' : ''}`}
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                title="Click or drag photos here to extract EXIF location tags"
+              >
                 <Upload className="w-8 h-8 text-cyan-400 mb-2" />
                 <span className="upload-title">Drop Geotagged Photos</span>
-                <span className="upload-desc">Supports EXIF Lat/Lng auto-extraction</span>
+                <span className="upload-desc">Supports EXIF Lat/Lng auto-extraction (or click to select)</span>
+                {isProcessingExif && (
+                  <div className="upload-status text-cyan-400 mt-2 text-xs font-semibold">
+                    Extracting EXIF metadata...
+                  </div>
+                )}
+                {uploadStatusMsg && !isProcessingExif && (
+                  <div className="upload-status text-emerald-400 mt-2 text-xs font-semibold">
+                    {uploadStatusMsg}
+                  </div>
+                )}
               </div>
 
               <div className="photo-list-grid mt-4">
-                {photos.map((ph) => (
-                  <div key={ph.id} className="photo-card" onClick={() => onSelectPhoto(ph)}>
-                    <img src={ph.url} alt={ph.title} className="photo-card-img" />
-                    <div className="photo-card-info">
-                      <span className="photo-card-title">{ph.title}</span>
-                      <span className="photo-card-coords mono">{ph.lat.toFixed(4)}, {ph.lng.toFixed(4)}</span>
-                    </div>
+                {photos.length === 0 ? (
+                  <div className="empty-state">
+                    <Camera className="w-8 h-8 text-slate-500 mb-2" />
+                    <span>No geotagged photos added yet. Drop or select image files above to extract EXIF coordinates and view them on the map.</span>
                   </div>
-                ))}
+                ) : (
+                  photos.map((ph) => (
+                    <div key={ph.id} className="photo-card" onClick={() => onSelectPhoto(ph)}>
+                      <img src={ph.url} alt={ph.title} className="photo-card-img" />
+                      <div className="photo-card-info">
+                        <span className="photo-card-title">{ph.title}</span>
+                        <span className="photo-card-coords mono">{ph.lat.toFixed(4)}, {ph.lng.toFixed(4)}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
