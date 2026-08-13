@@ -236,16 +236,19 @@ export default function MapView({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // dlsPolygons: start with fast computed estimate, then replace with government data
+  // dlsPolygons: fetch official government-certified boundaries directly to avoid visual jump
   const [dlsPolygons, setDlsPolygons] = useState(null);
   useEffect(() => {
     if (!inspectedPoint) { setDlsPolygons(null); return; }
-    // Show computed estimate immediately (instant feedback)
-    setDlsPolygons(getDlsPolygons(inspectedPoint.lat, inspectedPoint.lng));
-    // Then fetch official government-certified boundaries
+    let isCurrent = true;
     fetchDlsPolygons(inspectedPoint.lat, inspectedPoint.lng)
-      .then(polys => { if (polys) setDlsPolygons(polys); })
-      .catch(() => {});
+      .then(polys => {
+        if (isCurrent && polys) setDlsPolygons(polys);
+      })
+      .catch(() => {
+        if (isCurrent) setDlsPolygons(getDlsPolygons(inspectedPoint.lat, inspectedPoint.lng));
+      });
+    return () => { isCurrent = false; };
   }, [inspectedPoint]);
 
   return (
