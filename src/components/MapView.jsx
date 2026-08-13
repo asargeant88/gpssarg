@@ -337,6 +337,9 @@ export default function MapView({
             >
               {(() => {
                 const coords = formatAllCoordinates(inspectedPoint.lat, inspectedPoint.lng);
+                if (dlsPolygons && dlsPolygons.dls) {
+                  coords.dls = dlsPolygons.dls;
+                }
                 const lsdHeader = coords.dls.isValid
                   ? coords.dls.shortFormatted
                   : `${inspectedPoint.lat.toFixed(4)}, ${inspectedPoint.lng.toFixed(4)}`;
