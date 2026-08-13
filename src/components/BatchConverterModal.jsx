@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Layers, Download, Copy, Check, MapPin, Play, RefreshCw, FileText, Globe } from 'lucide-react';
+import { X, Layers, Download, Copy, Check, MapPin, Play, RefreshCw, FileText, Globe, Compass } from 'lucide-react';
 import { formatAllCoordinates, parseLocationInput, dlsToDd } from '../utils/coordinateConverter';
 
 const SAMPLE_BATCHES = {
@@ -14,9 +14,13 @@ const SAMPLE_BATCHES = {
 52.632377, -110.405860
 51.0447, -114.0719
 53.5461, -113.4938`,
+  utm: `12N 540211E 5831543N
+12N 531492E 5851208N
+12N 562521E 5842797N
+11N 705200E 5659000N`,
   mixed: `8-29-44-4 W4
 52.731429, -110.074108
-12U WD 31492 51208
+12N 540211E 5831543N
 52° 37' 57" N, 110° 24' 21" W
 11-20-42-3 W4`
 };
@@ -227,6 +231,12 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
                   onClick={() => setRawInput(SAMPLE_BATCHES.dd)}
                 >
                   <Globe className="w-3.5 h-3.5 mr-1 text-cyan-400" /> Lat / Lng Decimal Degrees
+                </button>
+                <button
+                  className="pane-btn secondary small"
+                  onClick={() => setRawInput(SAMPLE_BATCHES.utm)}
+                >
+                  <Compass className="w-3.5 h-3.5 mr-1 text-purple-400" /> UTM Grid Strings
                 </button>
                 <button
                   className="pane-btn secondary small"

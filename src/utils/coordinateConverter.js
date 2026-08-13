@@ -119,6 +119,36 @@ export function ddToUtm(lat, lng) {
 }
 
 /**
+ * Converts UTM string (e.g. "12N 540211E 5831543N" or "12N 540211 5831543") to GPS Lat/Lng (WGS84)
+ */
+export function utmToDd(utmStr) {
+  if (!utmStr || typeof utmStr !== 'string') return null;
+  const clean = utmStr.trim().toUpperCase();
+
+  const regex = /(?:ZONE\s*)?(\d{1,2})\s*([NS])?\s*[,;\s]\s*(?:E\s*)?(\d+(?:\.\d+)?)\s*E?\s*[,;\s]\s*(?:N\s*)?(\d+(?:\.\d+)?)\s*N?/i;
+  const match = clean.match(regex);
+  if (!match) return null;
+
+  const zone = parseInt(match[1], 10);
+  const hemisphere = (match[2] || 'N').toUpperCase();
+  const easting = parseFloat(match[3]);
+  const northing = parseFloat(match[4]);
+
+  if (isNaN(zone) || zone < 1 || zone > 60 || isNaN(easting) || isNaN(northing)) return null;
+
+  const wgs84 = '+proj=longlat +datum=WGS84 +no_defs';
+  const utmProj = `+proj=utm +zone=${zone} ${hemisphere === 'S' ? '+south' : ''} +datum=WGS84 +units=m +no_defs`;
+
+  try {
+    const [lng, lat] = proj4(utmProj, wgs84, [easting, northing]);
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng, zone: `${zone}${hemisphere}`, easting, northing, hemisphere };
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
  * Converts Lat/Lng to MGRS string
  */
 export function ddToMgrs(lat, lng, accuracy = 5) {
@@ -618,6 +648,11 @@ export function parseLocationInput(inputStr) {
   const dlsParsed = dlsToDd(clean);
   if (dlsParsed) {
     return { type: 'dls', lat: dlsParsed.lat, lng: dlsParsed.lng, label: `DLS Legal Subdivision: ${clean.toUpperCase()}` };
+  }
+
+  const utmParsed = utmToDd(clean);
+  if (utmParsed) {
+    return { type: 'utm', lat: utmParsed.lat, lng: utmParsed.lng, label: `UTM Grid (${utmParsed.zone}): ${clean.toUpperCase()}` };
   }
 
   const ddMatch = clean.match(/^([-+]?\d+(?:\.\d+)?)\s*[,;\s]\s*([-+]?\d+(?:\.\d+)?)$/);
