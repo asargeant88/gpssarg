@@ -44,7 +44,8 @@ export default function Sidebar({
   onClearMeasure,
   activeCursorPos,
   autoAddOnClick,
-  setAutoAddOnClick
+  setAutoAddOnClick,
+  onOpenBatchModal
 }) {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -436,6 +437,14 @@ export default function Sidebar({
               <p className="pane-desc">
                 Real-time translation across standard spatial reference formats.
               </p>
+
+              <button
+                className="pane-btn primary full mb-4"
+                onClick={onOpenBatchModal}
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#0f172a', fontWeight: 700 }}
+              >
+                <Layers className="w-4 h-4 mr-1.5" /> Coordinate King (Batch Converter)
+              </button>
 
               <div className="converter-input-box">
                 <label className="field-label">INPUT LOCATION / COORDINATE</label>

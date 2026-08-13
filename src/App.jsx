@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import MapView from './components/MapView';
 import CoordinateHUD from './components/CoordinateHUD';
 import PhotoModal from './components/PhotoModal';
+import BatchConverterModal from './components/BatchConverterModal';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
 export default function App() {
@@ -17,6 +18,9 @@ export default function App() {
   const [activeCursorPos, setActiveCursorPos] = useState({ lat: 51.0447, lng: -114.0719 });
   const [inspectedPoint, setInspectedPoint] = useState({ lat: 51.0447, lng: -114.0719 });
   const [flyTarget, setFlyTarget] = useState(null);
+
+  // Batch Converter modal state
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
 
   // Tools & Measure state
   const [isMeasuring, setIsMeasuring] = useState(false);
@@ -66,6 +70,11 @@ export default function App() {
 
   const handleAddWaypoint = (newWp) => {
     setWaypoints((prev) => [newWp, ...prev]);
+  };
+
+  const handleAddWaypointsBatch = (newWaypoints) => {
+    setWaypoints((prev) => [...newWaypoints, ...prev]);
+    setActiveTab('saved');
   };
 
   const handleDeleteWaypoint = (id) => {
@@ -130,6 +139,7 @@ export default function App() {
         activeCursorPos={activeCursorPos}
         autoAddOnClick={autoAddOnClick}
         setAutoAddOnClick={setAutoAddOnClick}
+        onOpenBatchModal={() => setIsBatchModalOpen(true)}
       />
 
       {/* Main Map Workspace */}
@@ -162,6 +172,14 @@ export default function App() {
       <PhotoModal
         photo={selectedPhoto}
         onClose={() => setSelectedPhoto(null)}
+        onFlyTo={handleFlyTo}
+      />
+
+      {/* Coordinate King — Batch Converter Modal */}
+      <BatchConverterModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        onAddWaypointsBatch={handleAddWaypointsBatch}
         onFlyTo={handleFlyTo}
       />
     </div>
