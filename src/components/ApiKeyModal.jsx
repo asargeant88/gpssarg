@@ -199,7 +199,7 @@ print(response.json())`;
                     type="text"
                     className="modal-input text-xs flex-1"
                     placeholder="Key Label (e.g. GIS Pipeline Worker, Mobile App)"
-                    value={newProjectName}
+                    value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
                   />
                   <button type="submit" disabled={loading} className="pane-btn primary text-xs shrink-0 px-4 font-bold">
