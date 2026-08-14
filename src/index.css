@@ -424,6 +424,32 @@ body, html, #root {
 
 
 
+/* MAP COLUMN */
+.sarggeo-map-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.map-view-wrapper {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+/* Leaflet needs a real height on its root container */
+.leaflet-map-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
 /* SARGGEO BRAND LOGO */
 .sarggeo-logo-container {
   display: flex;
@@ -1433,139 +1459,7 @@ body, html, #root {
   gap: 10px;
 }
 
-/* BATCH CONVERTER MODAL STYLES */
-.batch-modal-content {
-  background: var(--bg-card);
-  border: 1px solid var(--panel-border);
-  box-shadow: var(--shadow-deep);
-  border-radius: 16px;
-  width: 1100px;
-  max-width: 95vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.batch-modal-body {
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 20px;
-  padding: 20px;
-  flex: 1;
-  overflow: hidden;
-  background: rgba(7, 12, 20, 0.4);
-}
-
-.batch-input-column {
-  display: flex;
-  flex-direction: column;
-}
-
-.batch-textarea {
-  flex: 1;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-  padding: 12px;
-  color: var(--text-main);
-  font-size: 0.8rem;
-  resize: none;
-  outline: none;
-}
-
-.batch-textarea:focus {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
-}
-
-.batch-results-column {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.batch-table-container {
-  flex: 1;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-}
-
-.batch-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.78rem;
-}
-
-.batch-table th {
-  background: rgba(13, 22, 38, 0.9);
-  padding: 10px 12px;
-  color: var(--text-dim);
-  font-weight: 700;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  position: sticky;
-  top: 0;
-  border-bottom: 1px solid var(--panel-border);
-  z-index: 2;
-}
-
-.batch-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-.batch-table tr.valid-row:hover {
-  background: rgba(56, 189, 248, 0.08);
-}
-
-.batch-table tr.invalid-row {
-  opacity: 0.5;
-  background: rgba(239, 68, 68, 0.05);
-}
-
-/* AUTH & UPGRADE MODALS */
-.auth-modal-content {
-  background: var(--bg-card);
-  border: 1px solid var(--panel-border);
-  box-shadow: var(--shadow-deep);
-  border-radius: 16px;
-  width: 440px;
-  max-width: 95vw;
-  overflow: hidden;
-}
-
-.modal-icon-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-input {
-  width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  color: var(--text-main);
-  font-size: 0.85rem;
-  outline: none;
-}
-
-.modal-input:focus {
-  border-color: var(--accent-cyan);
-}
-
-/* POPUP MODAL SYSTEM (CENTERED OVERLAY) */
+/* BATCH CONVERTER & ALL POPUP MODAL STYLES — LIGHT THEME */
 .modal-overlay {
   position: fixed !important;
   top: 0 !important;
@@ -1574,9 +1468,9 @@ body, html, #root {
   bottom: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(3, 7, 18, 0.78) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   z-index: 99999 !important;
   display: flex !important;
   align-items: center !important;
@@ -1592,12 +1486,14 @@ body, html, #root {
 
 .batch-modal-content,
 .auth-modal-content,
-.upgrade-modal-content {
+.upgrade-modal-content,
+.photo-modal-content {
   position: relative !important;
-  background: linear-gradient(145deg, #0f172a, #0b1120) !important;
-  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(180, 192, 210, 0.6) !important;
   border-radius: 18px !important;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 50px rgba(56, 189, 248, 0.15) !important;
+  box-shadow: 0 25px 65px -10px rgba(15, 23, 42, 0.25), 0 0 2px rgba(0, 0, 0, 0.1) !important;
+  color: var(--text-main) !important;
   max-width: 95vw !important;
   max-height: 90vh !important;
   overflow: hidden !important;
@@ -1611,43 +1507,46 @@ body, html, #root {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-.modal-header {
+.modal-header,
+.photo-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 18px 24px;
-  background: rgba(15, 23, 42, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #f8fafc !important;
+  border-bottom: 1px solid rgba(180, 192, 210, 0.45) !important;
 }
 
 .modal-icon-badge {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid rgba(29, 111, 164, 0.3) !important;
+  background: rgba(29, 111, 164, 0.08) !important;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.modal-title {
+.modal-title,
+.modal-title-text {
   font-size: 1rem;
   font-weight: 800;
-  color: #ffffff;
+  color: #0f172a !important;
 }
 
 .modal-subtitle {
   font-size: 0.72rem;
-  color: #94a3b8;
+  color: #64748b !important;
 }
 
 .modal-close-btn {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  background: #f1f5f9 !important;
+  border: 1px solid rgba(180, 192, 210, 0.5) !important;
+  color: #64748b !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1656,19 +1555,102 @@ body, html, #root {
 }
 
 .modal-close-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #dc2626 !important;
+}
+
+.modal-input,
+.batch-textarea {
+  width: 100%;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #0f172a !important;
+  font-size: 0.85rem;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.modal-input:focus,
+.batch-textarea:focus {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 0 3px rgba(29, 111, 164, 0.15) !important;
+}
+
+.batch-modal-body {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 20px;
+  padding: 20px;
+  flex: 1;
+  overflow: hidden;
+  background: #f8fafc !important;
+}
+
+.batch-input-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.batch-results-column {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.batch-table-container {
+  flex: 1;
+  overflow-y: auto;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px;
+}
+
+.batch-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.78rem;
+}
+
+.batch-table th {
+  background: #f1f5f9 !important;
+  padding: 10px 12px;
+  color: #475569 !important;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid #cbd5e1 !important;
+  z-index: 2;
+}
+
+.batch-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #1e293b !important;
+}
+
+.batch-table tr.valid-row:hover {
+  background: #f0f9ff !important;
+}
+
+.batch-table tr.invalid-row {
+  opacity: 0.6;
+  background: #fef2f2 !important;
+}
+
+.auth-modal-content {
+  width: 440px;
+  max-width: 95vw;
 }
 
 .upgrade-modal-content {
-  background: var(--bg-card);
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  box-shadow: 0 0 30px rgba(245, 158, 11, 0.25);
-  border-radius: 18px;
   width: 480px;
   max-width: 95vw;
-  overflow: hidden;
 }
 
 .upgrade-banner {
@@ -1678,10 +1660,22 @@ body, html, #root {
 }
 
 .pricing-card {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: #f8fafc !important;
+  border: 1px solid rgba(245, 158, 11, 0.4) !important;
   border-radius: 12px;
   padding: 16px;
+}
+
+.pricing-card .text-2xl {
+  color: #0f172a !important;
+}
+
+.pricing-card .text-cyan-300 {
+  color: #0284c7 !important;
+}
+
+.pricing-card p {
+  color: #64748b !important;
 }
 
 .badge-pro {
@@ -1694,8 +1688,53 @@ body, html, #root {
   letter-spacing: 0.5px;
 }
 
-.meta-grid-2 > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* OVERRIDES FOR TAILWIND DARK CLASSES INSIDE MODALS */
+.modal-overlay .bg-slate-900,
+.modal-overlay .bg-slate-900\/60,
+.modal-overlay .bg-slate-900\/70,
+.modal-overlay .bg-slate-900\/80,
+.modal-overlay .bg-slate-900\/90,
+.modal-overlay .bg-slate-950,
+.modal-overlay .bg-slate-900\/40,
+.modal-overlay .bg-slate-900\/50,
+.modal-overlay .bg-slate-800,
+.modal-overlay .bg-black\/40,
+.modal-overlay .bg-black\/30 {
+  background-color: #f8fafc !important;
 }
+
+.modal-overlay .border-slate-800,
+.modal-overlay .border-slate-700,
+.modal-overlay .border-slate-600 {
+  border-color: #cbd5e1 !important;
+}
+
+.modal-overlay .text-white {
+  color: #0f172a !important;
+}
+
+.modal-overlay .text-slate-200,
+.modal-overlay .text-slate-300 {
+  color: #334155 !important;
+}
+
+.modal-overlay .text-slate-400,
+.modal-overlay .text-slate-500 {
+  color: #64748b !important;
+}
+
+.modal-overlay select.modal-input {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.modal-overlay select.modal-input option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.modal-overlay .feature-list {
+  color: #334155 !important;
+}
+

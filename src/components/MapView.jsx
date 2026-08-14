@@ -264,7 +264,7 @@ export default function MapView({
   }, [inspectedPoint]);
 
   return (
-    <div className="map-view-wrapper" style={{ flex: 1, height: 0 }}>
+    <div className="map-view-wrapper">
       <MapContainer
         center={[52.635911, -110.217777]}
         zoom={12}
