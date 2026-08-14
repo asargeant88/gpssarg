@@ -1145,6 +1145,76 @@ body, html, #root {
   background: rgba(239, 68, 68, 0.05);
 }
 
+/* AUTH & UPGRADE MODALS */
+.auth-modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow-deep);
+  border-radius: 16px;
+  width: 440px;
+  max-width: 95vw;
+  overflow: hidden;
+}
+
+.modal-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.modal-input:focus {
+  border-color: var(--accent-cyan);
+}
+
+.upgrade-modal-content {
+  background: var(--bg-card);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.25);
+  border-radius: 18px;
+  width: 480px;
+  max-width: 95vw;
+  overflow: hidden;
+}
+
+.upgrade-banner {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  padding: 20px;
+  color: #ffffff;
+}
+
+.pricing-card {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.badge-pro {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 0.65rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
 .meta-grid-2 > div {
   display: flex;
   flex-direction: column;

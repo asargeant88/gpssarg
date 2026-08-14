@@ -25,7 +25,7 @@ const SAMPLE_BATCHES = {
 11-20-42-3 W4`
 };
 
-export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBatch, onFlyTo }) {
+export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBatch, onFlyTo, onCheckConversionLimit }) {
   const [rawInput, setRawInput] = useState(SAMPLE_BATCHES.dls);
   const [results, setResults] = useState([]);
   const [copied, setCopied] = useState(false);
@@ -33,6 +33,11 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
   // Convert lines whenever rawInput changes
   useEffect(() => {
     if (!isOpen) return;
+
+    if (onCheckConversionLimit) {
+      const allowed = onCheckConversionLimit(1);
+      if (!allowed) return;
+    }
 
     const lines = rawInput.split('\n').map(l => l.trim()).filter(Boolean);
     let isCurrent = true;

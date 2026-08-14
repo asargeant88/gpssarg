@@ -11,12 +11,15 @@
     "lint": "oxlint"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "esri-leaflet": "^3.0.19",
     "exifreader": "^4.42.0",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.31.0",
     "mgrs": "^2.2.0",
+    "pg": "^8.23.0",
     "proj4": "^2.21.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

@@ -18,7 +18,11 @@ import {
   Compass,
   Globe,
   Upload,
-  Info
+  Info,
+  Folder,
+  Crown,
+  User,
+  LogOut
 } from 'lucide-react';
 import SargGeoLogo from './SargGeoLogo';
 import { formatAllCoordinates, parseLocationInput, fetchDlsPolygons } from '../utils/coordinateConverter';
@@ -45,7 +49,20 @@ export default function Sidebar({
   activeCursorPos,
   autoAddOnClick,
   setAutoAddOnClick,
-  onOpenBatchModal
+  onOpenBatchModal,
+  user,
+  subscriptionTier,
+  conversionsUsed,
+  onOpenAuthModal,
+  onOpenUpgradeModal,
+  onOpenAccountModal,
+  onOpenProjectsModal,
+  onSignOut,
+  projects = [],
+  activeProject,
+  onSelectProject,
+  onCreateProject,
+  onDeleteProject
 }) {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -312,7 +329,15 @@ export default function Sidebar({
           {!isCollapsed && (
             <div className="sidebar-tagline">
               <span>SPATIAL & GRID ATLAS</span>
-              <span className="live-status-pill">ONLINE</span>
+              {subscriptionTier === 'pro' ? (
+                <span className="badge-pro flex items-center gap-1">
+                  <Crown className="w-3 h-3 text-slate-900" /> PRO UNLIMITED
+                </span>
+              ) : (
+                <span className="live-status-pill text-amber-400 border-amber-500/40">
+                  FREE ({conversionsUsed}/3)
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -325,6 +350,38 @@ export default function Sidebar({
           {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
       </div>
+
+      {/* User Auth & Projects Quick Bar */}
+      {!isCollapsed && (
+        <div className="p-2.5 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between gap-1.5">
+          <button
+            className="pane-btn secondary small text-xs flex items-center gap-1.5 py-1.5 px-2.5"
+            onClick={user ? onOpenAccountModal : onOpenAuthModal}
+          >
+            <User className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="truncate">{user ? user.email.split('@')[0] : 'Sign In'}</span>
+          </button>
+
+          <button
+            className="pane-btn secondary small text-xs flex items-center gap-1.5 py-1.5 px-2.5"
+            onClick={onOpenProjectsModal}
+            title="Manage Hosted Projects"
+          >
+            <Folder className="w-3.5 h-3.5 text-amber-400" />
+            <span>Projects</span>
+          </button>
+
+          {subscriptionTier !== 'pro' && (
+            <button
+              className="pane-btn primary small text-xs font-extrabold py-1.5 px-2.5 shrink-0"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#0f172a' }}
+              onClick={onOpenUpgradeModal}
+            >
+              <Crown className="w-3.5 h-3.5 mr-1 inline" /> $15/mo Pro
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Navigation Tabs Bar */}
       <nav className="sidebar-nav-tabs">
@@ -430,6 +487,8 @@ export default function Sidebar({
             </div>
           )}
 
+
+
           {/* TAB 2: COORDINATE CONVERTER */}
           {activeTab === 'converter' && (
             <div className="tab-pane">
@@ -437,6 +496,21 @@ export default function Sidebar({
               <p className="pane-desc">
                 Real-time translation across standard spatial reference formats.
               </p>
+
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2"
+                  onClick={onOpenProjectsModal}
+                >
+                  <Folder className="w-3.5 h-3.5 text-amber-400" /> Cloud Projects
+                </button>
+                <button
+                  className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2"
+                  onClick={user ? onOpenAccountModal : onOpenAuthModal}
+                >
+                  <User className="w-3.5 h-3.5 text-cyan-400" /> Account & Pro
+                </button>
+              </div>
 
               <button
                 className="pane-btn primary full mb-4"
