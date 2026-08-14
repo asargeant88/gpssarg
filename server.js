@@ -77,6 +77,14 @@ async function initDb() {
         last_used_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS company VARCHAR(150);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS job_title VARCHAR(150);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS default_spatial_format VARCHAR(50) DEFAULT 'DLS';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS default_basemap VARCHAR(50) DEFAULT 'dark';
     `);
     console.log('Neon PostgreSQL Database connected and tables verified.');
   } catch (err) {
@@ -253,7 +261,13 @@ app.get('/api/auth/me', async (req, res) => {
   }
 
   try {
-    const result = await pool.query('SELECT id, email, subscription_status, conversion_count FROM users WHERE id = $1', [req.user.userId]);
+    const result = await pool.query(
+      `SELECT id, email, subscription_status, conversion_count,
+              first_name, last_name, company, job_title, phone,
+              default_spatial_format, default_basemap
+       FROM users WHERE id = $1`,
+      [req.user.userId]
+    );
     if (result.rows.length === 0) return res.json({ authenticated: false, user: null });
 
     const user = result.rows[0];
@@ -263,11 +277,122 @@ app.get('/api/auth/me', async (req, res) => {
         id: user.id,
         email: user.email,
         subscriptionStatus: user.subscription_status,
-        conversionCount: user.conversion_count
+        conversionCount: user.conversion_count,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        company: user.company || '',
+        jobTitle: user.job_title || '',
+        phone: user.phone || '',
+        defaultSpatialFormat: user.default_spatial_format || 'DLS',
+        defaultBasemap: user.default_basemap || 'dark'
       }
     });
   } catch (err) {
     res.status(500).json({ error: 'Server error.' });
+  }
+});
+
+// USER PROFILE SETTINGS API
+app.get('/api/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+
+  try {
+    const result = await pool.query(
+      `SELECT id, email, subscription_status, conversion_count,
+              first_name, last_name, company, job_title, phone,
+              default_spatial_format, default_basemap, created_at
+       FROM users WHERE id = $1`,
+      [req.user.userId]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found.' });
+    const u = result.rows[0];
+
+    res.json({
+      profile: {
+        id: u.id,
+        email: u.email,
+        subscriptionStatus: u.subscription_status,
+        conversionCount: u.conversion_count,
+        firstName: u.first_name || '',
+        lastName: u.last_name || '',
+        company: u.company || '',
+        jobTitle: u.job_title || '',
+        phone: u.phone || '',
+        defaultSpatialFormat: u.default_spatial_format || 'DLS',
+        defaultBasemap: u.default_basemap || 'dark',
+        createdAt: u.created_at
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user profile.' });
+  }
+});
+
+app.put('/api/user/profile', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+  const { firstName, lastName, company, jobTitle, phone, defaultSpatialFormat, defaultBasemap } = req.body;
+
+  try {
+    const updated = await pool.query(
+      `UPDATE users
+       SET first_name = $1, last_name = $2, company = $3, job_title = $4, phone = $5,
+           default_spatial_format = $6, default_basemap = $7
+       WHERE id = $8
+       RETURNING id, email, subscription_status, conversion_count,
+                 first_name, last_name, company, job_title, phone,
+                 default_spatial_format, default_basemap`,
+      [firstName || '', lastName || '', company || '', jobTitle || '', phone || '', defaultSpatialFormat || 'DLS', defaultBasemap || 'dark', req.user.userId]
+    );
+
+    const u = updated.rows[0];
+    res.json({
+      success: true,
+      message: 'Profile settings updated successfully.',
+      profile: {
+        id: u.id,
+        email: u.email,
+        subscriptionStatus: u.subscription_status,
+        conversionCount: u.conversion_count,
+        firstName: u.first_name || '',
+        lastName: u.last_name || '',
+        company: u.company || '',
+        jobTitle: u.job_title || '',
+        phone: u.phone || '',
+        defaultSpatialFormat: u.default_spatial_format || 'DLS',
+        defaultBasemap: u.default_basemap || 'dark'
+      }
+    });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: 'Failed to update profile settings.' });
+  }
+});
+
+app.post('/api/user/change-password', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword || newPassword.length < 4) {
+    return res.status(400).json({ error: 'New password must be at least 4 characters long.' });
+  }
+
+  try {
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.userId]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found.' });
+
+    const validPassword = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const newHash = await bcrypt.hash(newPassword, salt);
+
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.userId]);
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to change password.' });
   }
 });
 

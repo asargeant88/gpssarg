@@ -59,6 +59,9 @@ export default function Sidebar({
   onOpenAccountModal,
   onOpenProjectsModal,
   onOpenApiKeyModal,
+  onOpenUserSettingsModal,
+  onOpenConverterModal,
+  onOpenJsonImportModal,
   onSignOut,
   projects = [],
   activeProject,
@@ -347,25 +350,35 @@ export default function Sidebar({
         <button
           className="sidebar-collapse-toggle"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
         </button>
       </div>
 
-      {/* User Auth & Projects Quick Bar */}
+      {/* User Auth, Settings, JSON Import & Projects Quick Bar */}
       {!isCollapsed && (
-        <div className="p-2.5 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between gap-1.5">
+        <div className="p-2 bg-slate-900/90 border-b border-slate-800 grid grid-cols-4 gap-1">
           <button
-            className="pane-btn secondary small text-xs flex items-center gap-1.5 py-1.5 px-2.5"
-            onClick={user ? onOpenAccountModal : onOpenAuthModal}
+            className="pane-btn secondary small text-[11px] flex items-center justify-center gap-1 py-1.5 px-1 font-bold"
+            onClick={user ? onOpenUserSettingsModal : onOpenAuthModal}
+            title="User Profile & Settings"
           >
             <User className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="truncate">{user ? user.email.split('@')[0] : 'Sign In'}</span>
+            <span className="truncate">{user ? (user.firstName || user.email.split('@')[0]) : 'Sign In'}</span>
           </button>
 
           <button
-            className="pane-btn secondary small text-xs flex items-center gap-1.5 py-1.5 px-2.5"
+            className="pane-btn secondary small text-[11px] flex items-center justify-center gap-1 py-1.5 px-1 font-bold"
+            onClick={onOpenJsonImportModal}
+            title="Import JSON / GeoJSON Data"
+          >
+            <Upload className="w-3.5 h-3.5 text-cyan-400" />
+            <span>JSON</span>
+          </button>
+
+          <button
+            className="pane-btn secondary small text-[11px] flex items-center justify-center gap-1 py-1.5 px-1 font-bold"
             onClick={onOpenProjectsModal}
             title="Manage Hosted Projects"
           >
@@ -373,15 +386,14 @@ export default function Sidebar({
             <span>Projects</span>
           </button>
 
-          {subscriptionTier !== 'pro' && (
-            <button
-              className="pane-btn primary small text-xs font-extrabold py-1.5 px-2.5 shrink-0"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#0f172a' }}
-              onClick={onOpenUpgradeModal}
-            >
-              <Crown className="w-3.5 h-3.5 mr-1 inline" /> $15/mo Pro
-            </button>
-          )}
+          <button
+            className="pane-btn secondary small text-[11px] flex items-center justify-center gap-1 py-1.5 px-1 font-bold"
+            onClick={onOpenApiKeyModal}
+            title="Developer API Keys"
+          >
+            <Key className="w-3.5 h-3.5 text-emerald-400" />
+            <span>API Keys</span>
+          </button>
         </div>
       )}
 
@@ -501,16 +513,16 @@ export default function Sidebar({
 
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <button
-                  className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2"
-                  onClick={onOpenProjectsModal}
+                  className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2 font-bold"
+                  onClick={onOpenConverterModal}
                 >
-                  <Folder className="w-3.5 h-3.5 text-amber-400" /> Cloud Projects
+                  <Layers className="w-3.5 h-3.5 text-amber-400" /> Center Popup Converter
                 </button>
                 <button
-                  className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2"
-                  onClick={onOpenApiKeyModal}
+                  className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2 font-bold"
+                  onClick={onOpenJsonImportModal}
                 >
-                  <Key className="w-3.5 h-3.5 text-emerald-400" /> Developer API
+                  <Upload className="w-3.5 h-3.5 text-cyan-400" /> Import JSON
                 </button>
               </div>
 

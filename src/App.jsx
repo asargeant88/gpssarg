@@ -9,6 +9,9 @@ import UpgradeModal from './components/UpgradeModal';
 import AccountModal from './components/AccountModal';
 import ProjectsModal from './components/ProjectsModal';
 import ApiKeyModal from './components/ApiKeyModal';
+import UserSettingsModal from './components/UserSettingsModal';
+import ConverterModal from './components/ConverterModal';
+import JsonImportModal from './components/JsonImportModal';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
 export default function App() {
@@ -25,6 +28,9 @@ export default function App() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [isUserSettingsModalOpen, setIsUserSettingsModalOpen] = useState(false);
+  const [isConverterModalOpen, setIsConverterModalOpen] = useState(false);
+  const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
 
   // Hosted Cloud Projects state
   const [projects, setProjects] = useState([]);
@@ -351,6 +357,9 @@ export default function App() {
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+        onOpenUserSettingsModal={() => setIsUserSettingsModalOpen(true)}
+        onOpenConverterModal={() => setIsConverterModalOpen(true)}
+        onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
         onSignOut={handleSignOut}
         projects={projects}
         activeProject={activeProject}
@@ -449,6 +458,35 @@ export default function App() {
         user={user}
         subscriptionTier={subscriptionTier}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+      />
+
+      {/* Center User Profile Settings Modal */}
+      <UserSettingsModal
+        isOpen={isUserSettingsModalOpen}
+        onClose={() => setIsUserSettingsModalOpen(false)}
+        user={user}
+        subscriptionTier={subscriptionTier}
+        onUpdateUserProfile={(updatedUser) => setUser((prev) => ({ ...prev, ...updatedUser }))}
+        onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+      />
+
+      {/* Center Multi-Grid Coordinate Converter Modal */}
+      <ConverterModal
+        isOpen={isConverterModalOpen}
+        onClose={() => setIsConverterModalOpen(false)}
+        onFlyTo={handleFlyTo}
+        onCheckConversionLimit={checkConversionLimit}
+      />
+
+      {/* Center JSON Data Import Modal */}
+      <JsonImportModal
+        isOpen={isJsonImportModalOpen}
+        onClose={() => setIsJsonImportModalOpen(false)}
+        onAddWaypointsBatch={handleAddWaypointsBatch}
+        onFlyTo={handleFlyTo}
+        activeProject={activeProject}
+        user={user}
       />
     </div>
   );
