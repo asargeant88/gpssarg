@@ -71,10 +71,10 @@ export default function UserSettingsModal({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update profile');
+      if (!res.ok) throw new Error(data.error || 'Failed to save settings');
 
       setSaveSuccess(true);
-      if (onUpdateUserProfile) onUpdateUserProfile(data.profile);
+      if (onUpdateUserProfile) onUpdateUserProfile(data.user);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       setError(err.message);
@@ -88,12 +88,15 @@ export default function UserSettingsModal({
     setPassMessage('');
     setPassError('');
 
-    const token = localStorage.getItem('sarggeo_token');
-    if (!token) return;
+    if (!currentPassword || !newPassword) {
+      setPassError('Both current and new password are required.');
+      return;
+    }
 
+    const token = localStorage.getItem('sarggeo_token');
     try {
-      const res = await fetch('/api/user/change-password', {
-        method: 'POST',
+      const res = await fetch('/api/user/password', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
@@ -102,30 +105,35 @@ export default function UserSettingsModal({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Password update failed');
+      if (!res.ok) throw new Error(data.error || 'Failed to update password');
 
       setPassMessage('Password updated successfully!');
       setCurrentPassword('');
       setNewPassword('');
+      setTimeout(() => setPassMessage(''), 4000);
     } catch (err) {
       setPassError(err.message);
     }
   };
 
   const handleExportProfileJson = () => {
-    const config = {
-      email: user?.email,
-      firstName,
-      lastName,
-      company,
-      jobTitle,
-      phone,
-      defaultSpatialFormat,
-      defaultBasemap,
+    const profileConfig = {
+      user: {
+        email: user?.email,
+        firstName,
+        lastName,
+        company,
+        jobTitle,
+        phone
+      },
+      preferences: {
+        defaultSpatialFormat,
+        defaultBasemap
+      },
       exportedAt: new Date().toISOString()
     };
 
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(profileConfig, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -137,52 +145,53 @@ export default function UserSettingsModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="batch-modal-content" style={{ width: '680px' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="flex items-center gap-2">
-            <div className="modal-icon-badge" style={{ background: 'rgba(56, 189, 248, 0.15)', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
-              <User className="w-5 h-5 text-cyan-400" />
+      <div className="custom-modal-card settings-modal-width" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="custom-modal-header">
+          <div className="modal-header-left">
+            <div className="modal-icon-badge cyan">
+              <User className="w-5 h-5 text-cyan" />
             </div>
             <div>
-              <h2 className="modal-title">User Settings & Preferences</h2>
-              <p className="modal-subtitle">Manage personal profile, default spatial units, and security.</p>
+              <h2 className="modal-header-title">User Settings & Preferences</h2>
+              <p className="modal-header-subtitle">Manage personal profile, default spatial units, and security.</p>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <button className="modal-close-icon-btn" onClick={onClose}>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto" style={{ maxHeight: '75vh' }}>
-          {error && <div className="error-alert text-xs">{error}</div>}
+        {/* Modal Body */}
+        <div className="custom-modal-body space-y-4">
+          {error && <div className="alert-box danger">{error}</div>}
           {saveSuccess && (
-            <div className="p-3 bg-emerald-950/60 border border-emerald-500/60 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-400" /> Profile settings saved to database!
+            <div className="alert-box success">
+              <Check className="w-4 h-4 text-emerald" /> Profile settings saved to database!
             </div>
           )}
 
-          {/* Account Tier Badge Header */}
-          <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl flex items-center justify-between">
+          {/* Account Tier Card */}
+          <div className="settings-account-card">
             <div>
-              <div className="text-[11px] text-slate-400 font-semibold uppercase">ACCOUNT IDENTITY</div>
-              <div className="text-sm font-extrabold text-white">{user?.email}</div>
+              <div className="account-card-label">ACCOUNT IDENTITY</div>
+              <div className="account-card-email">{user?.email || 'asargeant8484@gmail.com'}</div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div>
               {subscriptionTier === 'pro' ? (
-                <span className="badge-pro flex items-center gap-1">
-                  <Crown className="w-3.5 h-3.5 text-slate-950" /> PRO UNLIMITED
+                <span className="badge-pro shadow-xs">
+                  <Crown className="w-3.5 h-3.5 inline mr-1" /> PRO UNLIMITED
                 </span>
               ) : (
                 <button
-                  className="pane-btn primary small text-xs font-bold px-3 py-1.5"
+                  className="custom-btn amber-pro-btn"
                   onClick={() => {
                     onClose();
                     if (onOpenUpgradeModal) onOpenUpgradeModal();
                   }}
-                  style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#0f172a' }}
                 >
-                  Upgrade to Pro ($15/mo)
+                  <Crown className="w-3.5 h-3.5 inline mr-1" /> Upgrade to Pro ($15/mo)
                 </button>
               )}
             </div>
@@ -190,76 +199,82 @@ export default function UserSettingsModal({
 
           {/* User Details Form */}
           <form onSubmit={handleSaveProfile} className="space-y-4">
-            <label className="field-label text-cyan-400">PERSONAL & COMPANY DETAILS</label>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400">First Name</label>
-                <input
-                  type="text"
-                  className="modal-input text-xs mt-1"
-                  placeholder="e.g. Alex"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                />
+            <div className="settings-section-card">
+              <div className="section-card-title cyan">
+                <Building className="w-4 h-4" /> Personal & Company Details
               </div>
 
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400">Last Name</label>
-                <input
-                  type="text"
-                  className="modal-input text-xs mt-1"
-                  placeholder="e.g. Sargeant"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                />
-              </div>
-            </div>
+              <div className="form-grid-2">
+                <div className="form-field">
+                  <label className="form-field-label">First Name</label>
+                  <input
+                    type="text"
+                    className="custom-modal-input"
+                    placeholder="e.g. Alex"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400">Company Name</label>
-                <input
-                  type="text"
-                  className="modal-input text-xs mt-1"
-                  placeholder="e.g. SargGeo Energy"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400">Job Title</label>
-                <input
-                  type="text"
-                  className="modal-input text-xs mt-1"
-                  placeholder="e.g. Senior Surveyor"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                />
+                <div className="form-field">
+                  <label className="form-field-label">Last Name</label>
+                  <input
+                    type="text"
+                    className="custom-modal-input"
+                    placeholder="e.g. Sargeant"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400">Phone</label>
-                <input
-                  type="text"
-                  className="modal-input text-xs mt-1"
-                  placeholder="e.g. +1 (403) 555-0192"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+              <div className="form-grid-3">
+                <div className="form-field">
+                  <label className="form-field-label">Company Name</label>
+                  <input
+                    type="text"
+                    className="custom-modal-input"
+                    placeholder="e.g. SargGeo Energy"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="form-field-label">Job Title</label>
+                  <input
+                    type="text"
+                    className="custom-modal-input"
+                    placeholder="e.g. Senior Surveyor"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label className="form-field-label">Phone</label>
+                  <input
+                    type="text"
+                    className="custom-modal-input"
+                    placeholder="e.g. +1 (403) 555-0192"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Platform Spatial & Map Preferences */}
-            <div className="pt-2">
-              <label className="field-label text-cyan-400">SPATIAL PLATFORM PREFERENCES</label>
+            <div className="settings-section-card">
+              <div className="section-card-title cyan">
+                <MapPin className="w-4 h-4" /> Spatial Platform Preferences
+              </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400">Default Spatial Reference Format</label>
+              <div className="form-grid-2">
+                <div className="form-field">
+                  <label className="form-field-label">Default Spatial Reference Format</label>
                   <select
-                    className="modal-input text-xs mt-1 bg-slate-900 border-slate-800 text-slate-200"
+                    className="custom-modal-select"
                     value={defaultSpatialFormat}
                     onChange={(e) => setDefaultSpatialFormat(e.target.value)}
                   >
@@ -271,10 +286,10 @@ export default function UserSettingsModal({
                   </select>
                 </div>
 
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400">Default Basemap Tile Theme</label>
+                <div className="form-field">
+                  <label className="form-field-label">Default Basemap Tile Theme</label>
                   <select
-                    className="modal-input text-xs mt-1 bg-slate-900 border-slate-800 text-slate-200"
+                    className="custom-modal-select"
                     value={defaultBasemap}
                     onChange={(e) => setDefaultBasemap(e.target.value)}
                   >
@@ -287,59 +302,58 @@ export default function UserSettingsModal({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3">
+            <div className="form-actions-row">
               <button
                 type="button"
-                className="pane-btn secondary small text-xs flex items-center gap-1.5 py-2 px-3"
+                className="custom-btn secondary"
                 onClick={handleExportProfileJson}
               >
-                <Download className="w-3.5 h-3.5 text-cyan-400" /> Export Profile JSON
+                <Download className="w-3.5 h-3.5 text-cyan" /> Export Profile JSON
               </button>
 
-              <button type="submit" disabled={saving} className="pane-btn primary text-xs font-bold px-5 py-2">
-                <Save className="w-4 h-4 mr-1.5 inline" /> {saving ? 'Saving...' : 'Save Profile Changes'}
+              <button type="submit" disabled={saving} className="custom-btn primary">
+                <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Profile Changes'}
               </button>
             </div>
           </form>
 
           {/* Quick Actions & Security */}
-          <div className="pt-4 border-t border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="settings-security-area">
+            <div className="api-key-bar">
               <div>
-                <span className="text-xs font-extrabold text-white">Developer API Keys</span>
-                <p className="text-[11px] text-slate-400">Access REST API gateway tokens for GIS scripts.</p>
+                <span className="api-key-title">Developer API Keys</span>
+                <p className="api-key-sub">Access REST API gateway tokens for GIS scripts.</p>
               </div>
               <button
-                className="pane-btn secondary small text-xs font-bold px-3 py-1.5 flex items-center gap-1.5"
+                className="custom-btn secondary"
                 onClick={() => {
                   onClose();
                   if (onOpenApiKeyModal) onOpenApiKeyModal();
                 }}
               >
-                <Key className="w-3.5 h-3.5 text-amber-400" /> Manage API Keys
+                <Key className="w-3.5 h-3.5 text-amber" /> Manage API Keys
               </button>
             </div>
 
             {/* Change Password */}
-            <form onSubmit={handleChangePassword} className="p-4 bg-slate-900/40 border border-slate-800 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
-                <Lock className="w-4 h-4 text-cyan-400" />
-                <span>Security & Password Update</span>
+            <form onSubmit={handleChangePassword} className="settings-section-card space-y-3">
+              <div className="section-card-title cyan">
+                <Lock className="w-4 h-4" /> Security & Password Update
               </div>
-              {passMessage && <div className="p-2 bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs rounded">{passMessage}</div>}
-              {passError && <div className="error-alert text-xs">{passError}</div>}
+              {passMessage && <div className="alert-box success">{passMessage}</div>}
+              {passError && <div className="alert-box danger">{passError}</div>}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="form-grid-2">
                 <input
                   type="password"
-                  className="modal-input text-xs"
+                  className="custom-modal-input"
                   placeholder="Current Password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                 />
                 <input
                   type="password"
-                  className="modal-input text-xs"
+                  className="custom-modal-input"
                   placeholder="New Password (min 4 chars)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -347,7 +361,7 @@ export default function UserSettingsModal({
               </div>
 
               <div className="flex justify-end">
-                <button type="submit" className="pane-btn secondary small text-xs font-bold px-4 py-1.5">
+                <button type="submit" className="custom-btn dark-btn">
                   Update Password
                 </button>
               </div>
