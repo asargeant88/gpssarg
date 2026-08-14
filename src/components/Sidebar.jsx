@@ -22,7 +22,8 @@ import {
   Folder,
   Crown,
   User,
-  LogOut
+  LogOut,
+  Key
 } from 'lucide-react';
 import SargGeoLogo from './SargGeoLogo';
 import { formatAllCoordinates, parseLocationInput, fetchDlsPolygons } from '../utils/coordinateConverter';
@@ -57,6 +58,7 @@ export default function Sidebar({
   onOpenUpgradeModal,
   onOpenAccountModal,
   onOpenProjectsModal,
+  onOpenApiKeyModal,
   onSignOut,
   projects = [],
   activeProject,
@@ -506,9 +508,9 @@ export default function Sidebar({
                 </button>
                 <button
                   className="pane-btn secondary small text-xs flex items-center justify-center gap-1.5 py-2"
-                  onClick={user ? onOpenAccountModal : onOpenAuthModal}
+                  onClick={onOpenApiKeyModal}
                 >
-                  <User className="w-3.5 h-3.5 text-cyan-400" /> Account & Pro
+                  <Key className="w-3.5 h-3.5 text-emerald-400" /> Developer API
                 </button>
               </div>
 

@@ -8,6 +8,7 @@ import AuthModal from './components/AuthModal';
 import UpgradeModal from './components/UpgradeModal';
 import AccountModal from './components/AccountModal';
 import ProjectsModal from './components/ProjectsModal';
+import ApiKeyModal from './components/ApiKeyModal';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isProjectsModalOpen, setIsProjectsModalOpen] = useState(false);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
 
   // Hosted Cloud Projects state
   const [projects, setProjects] = useState([]);
@@ -348,6 +350,7 @@ export default function App() {
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
         onOpenAccountModal={() => setIsAccountModalOpen(true)}
         onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
+        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
         onSignOut={handleSignOut}
         projects={projects}
         activeProject={activeProject}
@@ -422,6 +425,7 @@ export default function App() {
         subscriptionTier={subscriptionTier}
         conversionsUsed={conversionsUsed}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
         onSignOut={handleSignOut}
       />
 
@@ -436,6 +440,15 @@ export default function App() {
         onCreateProject={handleCreateProject}
         onDeleteProject={handleDeleteProject}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
+      />
+
+      {/* Developer API Key Portal Modal */}
+      <ApiKeyModal
+        isOpen={isApiKeyModalOpen}
+        onClose={() => setIsApiKeyModalOpen(false)}
+        user={user}
+        subscriptionTier={subscriptionTier}
+        onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
       />
     </div>
   );

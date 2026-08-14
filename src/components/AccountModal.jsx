@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, User, Crown, LogOut, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import { X, User, Crown, LogOut, CheckCircle2, ShieldCheck, Zap, Key } from 'lucide-react';
 
 export default function AccountModal({
   isOpen,
@@ -8,6 +8,7 @@ export default function AccountModal({
   subscriptionTier,
   conversionsUsed,
   onOpenUpgradeModal,
+  onOpenApiKeyModal,
   onSignOut
 }) {
   if (!isOpen) return null;
@@ -70,6 +71,16 @@ export default function AccountModal({
                   </button>
                 </div>
               )}
+
+              <button
+                className="pane-btn secondary full py-2.5 text-xs font-bold mb-2 flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  onClose();
+                  if (onOpenApiKeyModal) onOpenApiKeyModal();
+                }}
+              >
+                <Key className="w-4 h-4 text-amber-400" /> Manage Developer API Keys
+              </button>
 
               <button
                 className="pane-btn secondary full py-2.5 text-xs font-bold text-red-400 hover:bg-red-950/30 hover:border-red-500/40"

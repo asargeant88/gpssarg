@@ -1,10 +1,12 @@
 import express from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import pkg from 'pg';
 const { Pool } = pkg;
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { formatAllCoordinates, parseLocationInput, dlsToDd, utmToDd } from './src/utils/coordinateConverter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +65,18 @@ async function initDb() {
         conversion_count INT DEFAULT 0,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        key_prefix VARCHAR(20) NOT NULL,
+        key_hash VARCHAR(255) NOT NULL UNIQUE,
+        name VARCHAR(100) NOT NULL,
+        status VARCHAR(50) DEFAULT 'active',
+        expires_at TIMESTAMP WITH TIME ZONE,
+        last_used_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
     `);
     console.log('Neon PostgreSQL Database connected and tables verified.');
   } catch (err) {
@@ -83,6 +97,70 @@ const authenticateToken = (req, res, next) => {
   });
 };
 app.use(authenticateToken);
+
+// Developer API Key Authentication Middleware (with automatic expiration logic)
+const authenticateApiKey = async (req, res, next) => {
+  let apiKeyRaw = req.headers['x-api-key'];
+
+  if (!apiKeyRaw && req.headers['authorization']) {
+    const parts = req.headers['authorization'].split(' ');
+    if (parts.length === 2 && parts[0] === 'Bearer' && parts[1].startsWith('sg_live_')) {
+      apiKeyRaw = parts[1];
+    }
+  }
+
+  if (!apiKeyRaw) {
+    return res.status(401).json({
+      error: 'UNAUTHORIZED',
+      message: 'Missing API Key. Pass x-api-key header or Authorization: Bearer sg_live_...'
+    });
+  }
+
+  try {
+    const keyHash = crypto.createHash('sha256').update(apiKeyRaw.trim()).digest('hex');
+
+    const result = await pool.query(
+      `SELECT k.id, k.status, k.expires_at, k.name, u.id AS user_id, u.email, u.subscription_status
+       FROM api_keys k
+       JOIN users u ON k.user_id = u.id
+       WHERE k.key_hash = $1`,
+      [keyHash]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'INVALID_KEY', message: 'Invalid API Key.' });
+    }
+
+    const key = result.rows[0];
+
+    if (key.status !== 'active') {
+      return res.status(401).json({ error: 'REVOKED_KEY', message: 'This API Key has been revoked.' });
+    }
+
+    // EXPIRATION CHECK: Check if key expired or user subscription ended
+    const now = new Date();
+    const isSubscriptionActive = key.subscription_status === 'pro';
+    const isKeyExpired = key.expires_at && new Date(key.expires_at) < now;
+
+    if (!isSubscriptionActive || isKeyExpired) {
+      return res.status(401).json({
+        error: 'SUBSCRIPTION_EXPIRED',
+        message: 'API Key expired. Subscription/service has ended. Upgrade to Pro ($15/mo) to reactivate API keys.',
+        expiredAt: key.expires_at || now.toISOString(),
+        subscriptionStatus: key.subscription_status
+      });
+    }
+
+    // Asynchronously log last used timestamp
+    pool.query('UPDATE api_keys SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1', [key.id]).catch(() => {});
+
+    req.apiKey = key;
+    next();
+  } catch (err) {
+    console.error('API key auth error:', err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Failed to authenticate API Key.' });
+  }
+};
 
 // Container Health Probe
 app.get('/health', (req, res) => {
@@ -193,12 +271,11 @@ app.get('/api/auth/me', async (req, res) => {
   }
 });
 
-// CONVERSION TRACKING & PRO TIER PAYWALL API
+// CONVERSION TRACKING API
 app.post('/api/conversion/track', async (req, res) => {
   const { sessionId, countDelta = 1 } = req.body;
 
   try {
-    // 1. Authenticated User
     if (req.user) {
       const uRes = await pool.query('SELECT id, subscription_status, conversion_count FROM users WHERE id = $1', [req.user.userId]);
       if (uRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
@@ -232,7 +309,6 @@ app.post('/api/conversion/track', async (req, res) => {
       });
     }
 
-    // 2. Unauthenticated / Guest Session
     const sessId = sessionId || 'guest_' + req.ip;
     const gRes = await pool.query('SELECT conversion_count FROM guest_conversions WHERE session_id = $1', [sessId]);
     let currentCount = gRes.rows.length > 0 ? gRes.rows[0].conversion_count : 0;
@@ -279,10 +355,18 @@ app.post('/api/subscribe/pro', async (req, res) => {
       [req.user.userId]
     );
 
+    // Reactivate any expired API keys
+    const futureExpiry = new Date();
+    futureExpiry.setDate(futureExpiry.getDate() + 30);
+    await pool.query(
+      'UPDATE api_keys SET status = \'active\', expires_at = $1 WHERE user_id = $2',
+      [futureExpiry.toISOString(), req.user.userId]
+    );
+
     const user = updated.rows[0];
     res.json({
       success: true,
-      message: 'Account upgraded to $15/month Pro tier! Unlimited conversions & cloud projects unlocked.',
+      message: 'Account upgraded to $15/month Pro tier! Unlimited conversions, API keys, & cloud projects unlocked.',
       user: {
         id: user.id,
         email: user.email,
@@ -294,6 +378,185 @@ app.post('/api/subscribe/pro', async (req, res) => {
     console.error('Subscription error:', err);
     res.status(500).json({ error: 'Failed to update subscription.' });
   }
+});
+
+// API KEYS MANAGEMENT API (JWT Authenticated)
+app.get('/api/keys', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+
+  try {
+    const result = await pool.query(
+      `SELECT id, key_prefix, name, status, expires_at, last_used_at, created_at
+       FROM api_keys
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.userId]
+    );
+    res.json({ keys: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch API keys.' });
+  }
+});
+
+app.post('/api/keys/generate', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+
+  try {
+    const userId = req.user.userId || req.user.id;
+    const uRes = await pool.query('SELECT subscription_status FROM users WHERE id = $1', [userId]);
+    if (uRes.rows.length === 0 || uRes.rows[0].subscription_status !== 'pro') {
+      return res.status(403).json({
+        error: 'PRO_REQUIRED',
+        message: 'Developer API Keys require an active Pro Subscription ($15/mo).'
+      });
+    }
+
+    const { name = 'Production API Key' } = req.body;
+    const rawToken = crypto.randomBytes(24).toString('hex');
+    const rawKey = `sg_live_${rawToken}`;
+    const keyPrefix = `${rawKey.substring(0, 15)}...`;
+    const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
+
+    // Key expires 30 days from creation (auto-renewed with Pro subscription)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const newKey = await pool.query(
+      `INSERT INTO api_keys (user_id, key_prefix, key_hash, name, status, expires_at)
+       VALUES ($1, $2, $3, $4, 'active', $5)
+       RETURNING id, key_prefix, name, status, expires_at, created_at`,
+      [userId, keyPrefix, keyHash, (name || 'Production API Key').trim(), expiresAt.toISOString()]
+    );
+
+    res.status(201).json({
+      success: true,
+      apiKey: rawKey, // Raw key returned ONCE upon creation
+      key: newKey.rows[0]
+    });
+  } catch (err) {
+    console.error('API key generation error:', err);
+    res.status(500).json({ error: 'Failed to generate API Key: ' + err.message });
+  }
+});
+
+app.delete('/api/keys/:id', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+  const keyId = parseInt(req.params.id, 10);
+
+  try {
+    await pool.query('DELETE FROM api_keys WHERE id = $1 AND user_id = $2', [keyId, req.user.userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to revoke API key.' });
+  }
+});
+
+// PUBLIC REST API GATEWAY V1 (Authenticated via x-api-key)
+app.get('/api/v1/convert', authenticateApiKey, (req, res) => {
+  const { input, lat, lng } = req.query;
+
+  let resultLat = parseFloat(lat);
+  let resultLng = parseFloat(lng);
+  let rawInputStr = input || `${lat}, ${lng}`;
+
+  if (input) {
+    const dlsParsed = dlsToDd(input);
+    if (dlsParsed && dlsParsed.isValid) {
+      resultLat = dlsParsed.lat;
+      resultLng = dlsParsed.lng;
+    } else {
+      const utmParsed = utmToDd(input);
+      if (utmParsed) {
+        resultLat = utmParsed.lat;
+        resultLng = utmParsed.lng;
+      } else {
+        const parsed = parseLocationInput(input);
+        if (parsed && parsed.lat != null && parsed.lng != null) {
+          resultLat = parsed.lat;
+          resultLng = parsed.lng;
+        }
+      }
+    }
+  }
+
+  if (isNaN(resultLat) || isNaN(resultLng)) {
+    return res.status(400).json({
+      error: 'INVALID_INPUT',
+      message: 'Invalid coordinate or DLS string provided in query parameters (?input=... or ?lat=...&lng=...).'
+    });
+  }
+
+  const coords = formatAllCoordinates(resultLat, resultLng);
+
+  res.json({
+    success: true,
+    input: rawInputStr,
+    coordinates: {
+      lat: resultLat,
+      lng: resultLng,
+      dd: coords.dd,
+      dms: coords.dms,
+      dls: coords.dls,
+      utm: coords.utm,
+      mgrs: coords.mgrs,
+      nts: coords.nts,
+      geohash: coords.geohash
+    }
+  });
+});
+
+app.post('/api/v1/convert/batch', authenticateApiKey, (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'INVALID_BATCH', message: 'Request body must contain "items" array.' });
+  }
+
+  const results = items.map((itemStr) => {
+    let resultLat = null;
+    let resultLng = null;
+
+    const dlsParsed = dlsToDd(itemStr);
+    if (dlsParsed && dlsParsed.isValid) {
+      resultLat = dlsParsed.lat;
+      resultLng = dlsParsed.lng;
+    } else {
+      const utmParsed = utmToDd(itemStr);
+      if (utmParsed) {
+        resultLat = utmParsed.lat;
+        resultLng = utmParsed.lng;
+      } else {
+        const parsed = parseLocationInput(itemStr);
+        if (parsed && parsed.lat != null && parsed.lng != null) {
+          resultLat = parsed.lat;
+          resultLng = parsed.lng;
+        }
+      }
+    }
+
+    if (resultLat == null || resultLng == null) {
+      return { input: itemStr, isValid: false, error: 'Unrecognized spatial format' };
+    }
+
+    const coords = formatAllCoordinates(resultLat, resultLng);
+    return {
+      input: itemStr,
+      isValid: true,
+      lat: resultLat,
+      lng: resultLng,
+      dls: coords.dls,
+      utm: coords.utm,
+      mgrs: coords.mgrs,
+      dd: coords.dd,
+      dms: coords.dms
+    };
+  });
+
+  res.json({
+    success: true,
+    total: results.length,
+    validCount: results.filter((r) => r.isValid).length,
+    results
+  });
 });
 
 // HOSTED PROJECTS API
@@ -394,6 +657,9 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 app.use((req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'NOT_FOUND', message: `API endpoint ${req.method} ${req.path} not found.` });
+  }
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
