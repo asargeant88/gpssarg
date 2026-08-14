@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Crosshair, MapPin, Compass, Layers } from 'lucide-react';
+import { Copy, Check, MapPin, Layers, Mountain } from 'lucide-react';
 import { formatAllCoordinates, fetchDlsPolygons } from '../utils/coordinateConverter';
 
 export default function CoordinateHUD({
@@ -8,7 +8,8 @@ export default function CoordinateHUD({
   activeBasemap,
   showGridLines,
   onToggleGridLines,
-  onPinCurrentLocation
+  onPinCurrentLocation,
+  elevation
 }) {
   const [copiedKey, setCopiedKey] = useState(null);
   const [officialDls, setOfficialDls] = useState(null);
@@ -18,9 +19,7 @@ export default function CoordinateHUD({
     let isCurrent = true;
     fetchDlsPolygons(cursorPos.lat, cursorPos.lng)
       .then(res => {
-        if (isCurrent && res && res.dls) {
-          setOfficialDls(res.dls);
-        }
+        if (isCurrent && res && res.dls) setOfficialDls(res.dls);
       })
       .catch(() => {});
     return () => { isCurrent = false; };
@@ -37,92 +36,108 @@ export default function CoordinateHUD({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const elevText = elevation != null ? `${Math.round(elevation)} m` : '— m';
+
   return (
-    <div className="coordinate-hud-container">
-      <div className="hud-glass-card">
-        {/* Header Badges */}
-        <div className="hud-header">
-          <div className="hud-badge active-badge">
-            <span className="live-dot"></span>
-            LIVE TICKER
-          </div>
-          <div className="hud-badge info-badge">
-            <Compass className="w-3.5 h-3.5 mr-1" />
-            WGS84 (EPSG:4326)
-          </div>
-          <div className="hud-badge info-badge">
-            ZOOM {zoomLevel}
-          </div>
-        </div>
+    <div className="sarggeo-status-bar">
+      {/* Left: Live indicator */}
+      <div className="status-bar-section status-live">
+        <span className="live-dot" />
+        <span className="status-label">LIVE</span>
+      </div>
 
-        {/* Primary Ticker Grid */}
-        <div className="hud-metrics-row">
-          {/* DLS / LSD */}
-          <div className="hud-metric-item highlight-dls" onClick={() => handleCopy(dlsDisplay.formatted, 'dls')}>
-            <span className="hud-label text-amber-400">DLS / LSD (ATS)</span>
-            <span className="hud-value mono text-amber-300">{dlsDisplay.isValid ? dlsDisplay.shortFormatted : 'N/A'}</span>
-            <button className="hud-copy-btn" title="Copy DLS">
-              {copiedKey === 'dls' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+      <div className="status-bar-divider" />
 
-          {/* Decimal Degrees */}
-          <div className="hud-metric-item" onClick={() => handleCopy(formatted.dd.formatted, 'dd')}>
-            <span className="hud-label">LAT / LNG (DD)</span>
-            <span className="hud-value mono">{formatted.dd.formatted}</span>
-            <button className="hud-copy-btn" title="Copy Lat/Lng">
-              {copiedKey === 'dd' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+      {/* DLS / ATS */}
+      <div
+        className="status-bar-section status-clickable"
+        onClick={() => handleCopy(dlsDisplay.formatted, 'dls')}
+        title="Click to copy DLS"
+      >
+        <span className="status-label">DLS</span>
+        <span className="status-value status-accent">
+          {dlsDisplay.isValid ? dlsDisplay.shortFormatted : 'N/A'}
+        </span>
+        {copiedKey === 'dls' ? <Check className="w-3 h-3" style={{ color: '#16795a' }} /> : null}
+      </div>
 
-          {/* UTM */}
-          <div className="hud-metric-item" onClick={() => handleCopy(formatted.utm.formatted, 'utm')}>
-            <span className="hud-label">UTM GRID</span>
-            <span className="hud-value mono">{formatted.utm.formatted}</span>
-            <button className="hud-copy-btn" title="Copy UTM">
-              {copiedKey === 'utm' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+      <div className="status-bar-divider" />
 
-          {/* MGRS */}
-          <div className="hud-metric-item" onClick={() => handleCopy(formatted.mgrs, 'mgrs')}>
-            <span className="hud-label">MGRS CODE</span>
-            <span className="hud-value mono">{formatted.mgrs}</span>
-            <button className="hud-copy-btn" title="Copy MGRS">
-              {copiedKey === 'mgrs' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
+      {/* Lat / Lng */}
+      <div
+        className="status-bar-section status-clickable"
+        onClick={() => handleCopy(formatted.dd.formatted, 'dd')}
+        title="Click to copy Lat/Lng"
+      >
+        <span className="status-label">LAT</span>
+        <span className="status-value mono">{cursorPos.lat.toFixed(6)}</span>
+        <span className="status-label" style={{ marginLeft: 8 }}>LNG</span>
+        <span className="status-value mono">{cursorPos.lng.toFixed(6)}</span>
+        {copiedKey === 'dd' ? <Check className="w-3 h-3" style={{ color: '#16795a', marginLeft: 4 }} /> : null}
+      </div>
 
-          {/* DMS */}
-          <div className="hud-metric-item" onClick={() => handleCopy(formatted.dms.formatted, 'dms')}>
-            <span className="hud-label">DMS FORMAT</span>
-            <span className="hud-value mono">{formatted.dms.lat}</span>
-            <button className="hud-copy-btn" title="Copy DMS">
-              {copiedKey === 'dms' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </div>
+      <div className="status-bar-divider" />
 
-        {/* Action Controls */}
-        <div className="hud-actions">
-          <button
-            className={`hud-action-btn ${showGridLines ? 'active' : ''}`}
-            onClick={onToggleGridLines}
-            title="Toggle Grid Overlay"
-          >
-            <Layers className="w-4 h-4 mr-1.5" />
-            Grid Lines {showGridLines ? 'ON' : 'OFF'}
-          </button>
+      {/* Elevation */}
+      <div className="status-bar-section" title="Elevation at clicked point">
+        <Mountain className="w-3.5 h-3.5" style={{ color: 'var(--accent-emerald)', marginRight: 4 }} />
+        <span className="status-label">ELEV</span>
+        <span className="status-value" style={{ color: 'var(--accent-emerald)' }}>{elevText}</span>
+      </div>
 
-          <button
-            className="hud-action-btn primary"
-            onClick={onPinCurrentLocation}
-            title="Drop Pin at Current Cursor"
-          >
-            <MapPin className="w-4 h-4 mr-1.5" />
-            Drop Waypoint
-          </button>
-        </div>
+      <div className="status-bar-divider" />
+
+      {/* UTM */}
+      <div
+        className="status-bar-section status-clickable"
+        onClick={() => handleCopy(formatted.utm.formatted, 'utm')}
+        title="Click to copy UTM"
+      >
+        <span className="status-label">UTM</span>
+        <span className="status-value mono">{formatted.utm.formatted}</span>
+        {copiedKey === 'utm' ? <Check className="w-3 h-3" style={{ color: '#16795a', marginLeft: 4 }} /> : null}
+      </div>
+
+      <div className="status-bar-divider" />
+
+      {/* MGRS */}
+      <div
+        className="status-bar-section status-clickable"
+        onClick={() => handleCopy(formatted.mgrs, 'mgrs')}
+        title="Click to copy MGRS"
+      >
+        <span className="status-label">MGRS</span>
+        <span className="status-value mono">{formatted.mgrs}</span>
+        {copiedKey === 'mgrs' ? <Check className="w-3 h-3" style={{ color: '#16795a', marginLeft: 4 }} /> : null}
+      </div>
+
+      <div className="status-bar-divider" />
+
+      {/* Zoom */}
+      <div className="status-bar-section">
+        <span className="status-label">ZOOM</span>
+        <span className="status-value">{zoomLevel}</span>
+      </div>
+
+      {/* Right: actions */}
+      <div className="status-bar-right">
+        <button
+          className={`status-action-btn ${showGridLines ? 'active' : ''}`}
+          onClick={onToggleGridLines}
+          title="Toggle Grid Overlay"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          Grid {showGridLines ? 'ON' : 'OFF'}
+        </button>
+        <button
+          className="status-action-btn primary"
+          onClick={onPinCurrentLocation}
+          title="Drop Pin at Current Cursor"
+        >
+          <MapPin className="w-3.5 h-3.5" />
+          Drop Pin
+        </button>
+        <span className="status-label" style={{ marginLeft: 8 }}>WGS84 (EPSG:4326)</span>
       </div>
     </div>
   );

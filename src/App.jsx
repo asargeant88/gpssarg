@@ -42,6 +42,7 @@ export default function App() {
   const [zoomLevel, setZoomLevel] = useState(12);
   const [activeCursorPos, setActiveCursorPos] = useState({ lat: 51.0447, lng: -114.0719 });
   const [inspectedPoint, setInspectedPoint] = useState({ lat: 51.0447, lng: -114.0719 });
+  const [clickElevation, setClickElevation] = useState(null);
   const [flyTarget, setFlyTarget] = useState(null);
 
   // Batch Converter modal state
@@ -203,9 +204,10 @@ export default function App() {
     setInspectedPoint({ lat, lng });
   };
 
-  const handleMapClick = (coords) => {
+  const handleMapClick = (coords, elevation = null) => {
     setActiveCursorPos(coords);
     setInspectedPoint(coords);
+    if (elevation !== null) setClickElevation(elevation);
 
     if (isMeasuring) {
       setMeasurePoints((prev) => [...prev, coords]);
@@ -223,7 +225,7 @@ export default function App() {
         notes: `Clicked at ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`,
         lat: coords.lat,
         lng: coords.lng,
-        color: '#34d399',
+        color: '#16795a',
         category: 'Mouse Selection'
       });
     }
@@ -319,80 +321,114 @@ export default function App() {
     setActiveProject(null);
   };
 
+  const activeTabLabel = { search: 'Search & Locate', converter: 'Coordinate Converter', layers: 'Basemaps & Layers', saved: 'Saved Waypoints', photos: 'Geotagged Media', tools: 'Spatial Tools' };
+
   return (
     <div className="sarggeo-app-container">
-      {/* Sidebar Control Panel */}
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        isCollapsed={isCollapsed}
-        setIsCollapsed={setIsCollapsed}
-        basemap={basemap}
-        setBasemap={setBasemap}
-        showGridLines={showGridLines}
-        setShowGridLines={setShowGridLines}
-        waypoints={waypoints}
-        onAddWaypoint={handleAddWaypoint}
-        onDeleteWaypoint={handleDeleteWaypoint}
-        photos={photos}
-        onUploadPhoto={handleUploadPhoto}
-        onSelectPhoto={(ph) => setSelectedPhoto(ph)}
-        onFlyTo={handleFlyTo}
-        measurePoints={measurePoints}
-        onStartMeasure={handleStartMeasure}
-        onClearMeasure={handleClearMeasure}
-        activeCursorPos={activeCursorPos}
-        autoAddOnClick={autoAddOnClick}
-        setAutoAddOnClick={setAutoAddOnClick}
-        onOpenBatchModal={() => {
-          checkConversionLimit(1).then((allowed) => {
-            if (allowed) setIsBatchModalOpen(true);
-          });
-        }}
-        user={user}
-        subscriptionTier={subscriptionTier}
-        conversionsUsed={conversionsUsed}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
-        onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
-        onOpenAccountModal={() => setIsAccountModalOpen(true)}
-        onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
-        onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
-        onOpenUserSettingsModal={() => setIsUserSettingsModalOpen(true)}
-        onOpenConverterModal={() => setIsConverterModalOpen(true)}
-        onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
-        onSignOut={handleSignOut}
-        projects={projects}
-        activeProject={activeProject}
-        onSelectProject={handleSelectProject}
-        onCreateProject={handleCreateProject}
-        onDeleteProject={handleDeleteProject}
-      />
 
-      {/* Main Map Workspace */}
-      <MapView
-        basemap={basemap}
-        showGridLines={showGridLines}
-        waypoints={waypoints}
-        photos={photos}
-        flyTarget={flyTarget}
-        inspectedPoint={inspectedPoint}
-        measurePoints={measurePoints}
-        onCursorMove={setActiveCursorPos}
-        onMapClick={handleMapClick}
-        onZoomChange={setZoomLevel}
-        onSaveWaypoint={handleAddWaypoint}
-        onSelectPhoto={(ph) => setSelectedPhoto(ph)}
-      />
+      {/* TOP HEADER BAR */}
+      <header className="sarggeo-top-bar">
+        <div className="top-bar-left">
+          <span className="top-bar-logo-text">SargGeo</span>
+          <span className="top-bar-pipe">|</span>
+          <span className="top-bar-subtitle">Spatial & Grid Atlas</span>
+        </div>
+        <div className="top-bar-center">
+          <span className="top-bar-page-title">{activeTabLabel[activeTab] || 'Map View'}</span>
+        </div>
+        <div className="top-bar-right">
+          {activeProject && (
+            <span className="top-bar-project-badge">
+              📁 {activeProject.name}
+            </span>
+          )}
+          <button
+            className="top-bar-user-btn"
+            onClick={user ? () => setIsUserSettingsModalOpen(true) : () => setIsAuthModalOpen(true)}
+          >
+            {user ? (user.firstName || user.email?.split('@')[0] || 'Account') : 'Sign In'}
+          </button>
+        </div>
+      </header>
 
-      {/* Real-time Coordinate HUD Ticker */}
-      <CoordinateHUD
-        cursorPos={inspectedPoint || activeCursorPos}
-        zoomLevel={zoomLevel}
-        activeBasemap={basemap}
-        showGridLines={showGridLines}
-        onToggleGridLines={() => setShowGridLines(!showGridLines)}
-        onPinCurrentLocation={handlePinCurrentLocation}
-      />
+      {/* MAIN CONTENT ROW: dock + panel + map stacked vertically below header */}
+      <div className="sarggeo-workspace">
+        {/* Sidebar (icon dock + content panel) */}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isCollapsed={isCollapsed}
+          setIsCollapsed={setIsCollapsed}
+          basemap={basemap}
+          setBasemap={setBasemap}
+          showGridLines={showGridLines}
+          setShowGridLines={setShowGridLines}
+          waypoints={waypoints}
+          onAddWaypoint={handleAddWaypoint}
+          onDeleteWaypoint={handleDeleteWaypoint}
+          photos={photos}
+          onUploadPhoto={handleUploadPhoto}
+          onSelectPhoto={(ph) => setSelectedPhoto(ph)}
+          onFlyTo={handleFlyTo}
+          measurePoints={measurePoints}
+          onStartMeasure={handleStartMeasure}
+          onClearMeasure={handleClearMeasure}
+          activeCursorPos={activeCursorPos}
+          autoAddOnClick={autoAddOnClick}
+          setAutoAddOnClick={setAutoAddOnClick}
+          onOpenBatchModal={() => {
+            checkConversionLimit(1).then((allowed) => {
+              if (allowed) setIsBatchModalOpen(true);
+            });
+          }}
+          user={user}
+          subscriptionTier={subscriptionTier}
+          conversionsUsed={conversionsUsed}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+          onOpenAccountModal={() => setIsAccountModalOpen(true)}
+          onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
+          onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+          onOpenUserSettingsModal={() => setIsUserSettingsModalOpen(true)}
+          onOpenConverterModal={() => setIsConverterModalOpen(true)}
+          onOpenJsonImportModal={() => setIsJsonImportModalOpen(true)}
+          onSignOut={handleSignOut}
+          projects={projects}
+          activeProject={activeProject}
+          onSelectProject={handleSelectProject}
+          onCreateProject={handleCreateProject}
+          onDeleteProject={handleDeleteProject}
+        />
+
+        {/* Map fills remaining horizontal space */}
+        <div className="sarggeo-map-column">
+          <MapView
+            basemap={basemap}
+            showGridLines={showGridLines}
+            waypoints={waypoints}
+            photos={photos}
+            flyTarget={flyTarget}
+            inspectedPoint={inspectedPoint}
+            measurePoints={measurePoints}
+            onCursorMove={setActiveCursorPos}
+            onMapClick={handleMapClick}
+            onZoomChange={setZoomLevel}
+            onSaveWaypoint={handleAddWaypoint}
+            onSelectPhoto={(ph) => setSelectedPhoto(ph)}
+          />
+
+          {/* Status Bar */}
+          <CoordinateHUD
+            cursorPos={inspectedPoint || activeCursorPos}
+            zoomLevel={zoomLevel}
+            activeBasemap={basemap}
+            showGridLines={showGridLines}
+            onToggleGridLines={() => setShowGridLines(!showGridLines)}
+            onPinCurrentLocation={handlePinCurrentLocation}
+            elevation={clickElevation}
+          />
+        </div>
+      </div>
 
       {/* Geotagged Photo Modal */}
       <PhotoModal

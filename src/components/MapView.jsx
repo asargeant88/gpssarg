@@ -149,14 +149,25 @@ function MapFlyHandler({ flyTarget }) {
   return null;
 }
 
-// Component to capture mouse hover and click events
+// Component to capture mouse hover and click events + elevation lookup
 function MapEventsHandler({ onCursorMove, onMapClick, onZoomChange }) {
   const map = useMapEvents({
     mousemove(e) {
       onCursorMove({ lat: e.latlng.lat, lng: e.latlng.lng });
     },
-    click(e) {
-      onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng });
+    async click(e) {
+      const coords = { lat: e.latlng.lat, lng: e.latlng.lng };
+      onMapClick(coords, null); // immediate update with no elevation yet
+      try {
+        const res = await fetch(
+          `https://api.open-elevation.com/api/v1/lookup?locations=${coords.lat},${coords.lng}`
+        );
+        const data = await res.json();
+        const elev = data?.results?.[0]?.elevation ?? null;
+        onMapClick(coords, elev);
+      } catch {
+        // elevation unavailable, leave as null
+      }
     },
     zoomend() {
       onZoomChange(map.getZoom());
@@ -169,6 +180,7 @@ function MapEventsHandler({ onCursorMove, onMapClick, onZoomChange }) {
 
   return null;
 }
+
 
 export default function MapView({
   basemap,
@@ -252,7 +264,7 @@ export default function MapView({
   }, [inspectedPoint]);
 
   return (
-    <div className="map-view-wrapper">
+    <div className="map-view-wrapper" style={{ flex: 1, height: 0 }}>
       <MapContainer
         center={[52.635911, -110.217777]}
         zoom={12}
