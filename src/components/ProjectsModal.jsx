@@ -37,7 +37,7 @@ export default function ProjectsModal({
             </div>
             <div>
               <h2 className="modal-header-title">Hosted Cloud Projects Manager</h2>
-              <p className="modal-header-subtitle">Cloud database storage on Neon PostgreSQL</p>
+              <p className="modal-header-subtitle">Manage cloud spatial projects & survey datasets</p>
             </div>
           </div>
           <button className="modal-close-icon-btn" onClick={onClose}>
@@ -53,7 +53,7 @@ export default function ProjectsModal({
               <div>
                 <h3 className="text-sm font-extrabold text-slate-900">Sign In Required for Cloud Database Storage</h3>
                 <p className="text-xs text-slate-500 mt-1">
-                  Create a free account to save map progress, survey points, and waypoints to your personal PostgreSQL database.
+                  Create a free account to save map progress, survey points, and waypoints to your personal cloud workspace.
                 </p>
               </div>
               <button

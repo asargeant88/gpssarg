@@ -85,7 +85,7 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span><strong>Hosted Cloud Projects</strong> saved directly on Neon PostgreSQL DB</span>
+              <span><strong>Hosted Cloud Projects</strong> saved securely to your cloud workspace</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />

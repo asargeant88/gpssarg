@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { formatAllCoordinates, parseLocationInput } from '../utils/coordinateConverter';
 import { exportPoints } from '../utils/exporter';
+import { fetchBatchElevations } from '../utils/elevationService';
 
 export default function ProjectSpreadsheetModal({
   isOpen,
@@ -32,6 +33,24 @@ export default function ProjectSpreadsheetModal({
   const [copiedId, setCopiedId] = useState(null);
   const [sortField, setSortField] = useState('id');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [elevationsMap, setElevationsMap] = useState({});
+
+  // Fetch missing elevations automatically when points load
+  useEffect(() => {
+    if (!isOpen || !projectPoints || projectPoints.length === 0) return;
+
+    const pointsMissingElev = projectPoints.filter(
+      (p) => (p.elevation == null && p.altitude == null && p.elev == null)
+    );
+
+    if (pointsMissingElev.length > 0) {
+      fetchBatchElevations(pointsMissingElev).then((fetchedMap) => {
+        if (fetchedMap && Object.keys(fetchedMap).length > 0) {
+          setElevationsMap((prev) => ({ ...prev, ...fetchedMap }));
+        }
+      });
+    }
+  }, [isOpen, projectPoints]);
 
   // Single row form state
   const [newTitle, setNewTitle] = useState('');
@@ -269,7 +288,7 @@ Pipeline Marker 109, 52.827063, -110.538848, 650, Inspection Marker`;
             <div>
               <h2 className="modal-header-title">Project Data Spreadsheet Grid — {activeProject.name}</h2>
               <p className="modal-header-subtitle">
-                {projectPoints.length} Saved Survey Points & Elevation Records • Hosted PostgreSQL DB
+                {projectPoints.length} Saved Survey Points & Spatial Elevation Records
               </p>
             </div>
           </div>
@@ -492,7 +511,8 @@ Pipeline Marker 109, 52.827063, -110.538848, 650, Inspection Marker`;
                 ) : (
                   sortedPoints.map((pt, idx) => {
                     const coords = formatAllCoordinates(pt.lat, pt.lng);
-                    const elevationM = pt.elevation || pt.altitude || (pt.elev ? parseFloat(pt.elev) : null);
+                    const fetchedElev = elevationsMap[pt.id || `${pt.lat}_${pt.lng}`];
+                    const elevationM = pt.elevation || pt.altitude || (pt.elev ? parseFloat(pt.elev) : null) || fetchedElev;
                     const elevationFt = elevationM != null ? (elevationM * 3.28084).toFixed(1) : null;
 
                     return (
