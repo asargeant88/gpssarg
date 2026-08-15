@@ -15,7 +15,9 @@ import JsonImportModal from './components/JsonImportModal';
 import RightProjectPanel from './components/RightProjectPanel';
 import ProjectSpreadsheetModal from './components/ProjectSpreadsheetModal';
 import SargGeoLogo from './components/SargGeoLogo';
-import { Globe } from 'lucide-react';
+import LandingPage from './components/LandingPage';
+import TosModal from './components/TosModal';
+import { Globe, Scale, Home, Compass } from 'lucide-react';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
 export default function App() {
@@ -36,6 +38,8 @@ export default function App() {
   const [isConverterModalOpen, setIsConverterModalOpen] = useState(false);
   const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
   const [isSpreadsheetModalOpen, setIsSpreadsheetModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState('app'); // 'app' | 'landing'
+  const [isTosModalOpen, setIsTosModalOpen] = useState(false);
 
   // Hosted Cloud Projects state
   const [projects, setProjects] = useState([]);
@@ -401,18 +405,50 @@ export default function App() {
 
   const activeTabLabel = { search: 'Search & Locate', converter: 'Coordinate Converter', layers: 'Basemaps & Layers', saved: 'Saved Waypoints', photos: 'Geotagged Media', tools: 'Spatial Tools' };
 
+  if (viewMode === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onLaunchApp={() => setViewMode('app')}
+          onOpenAuthModal={() => setIsAuthModalOpen(true)}
+          onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
+          onOpenTosModal={() => setIsTosModalOpen(true)}
+        />
+        <TosModal isOpen={isTosModalOpen} onClose={() => setIsTosModalOpen(false)} />
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} onAuthSuccess={handleAuthSuccess} />
+        <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} user={user} onUpgradeSuccess={handleUpgradeSuccess} remainingFree={Math.max(0, 3 - conversionsUsed)} />
+      </>
+    );
+  }
+
   return (
     <div className="sarggeo-app-container">
 
       {/* TOP HEADER BAR */}
       <header className="sarggeo-top-bar">
         <div className="top-bar-left flex items-center gap-2.5">
-          <SargGeoLogo size="small" />
+          <button type="button" className="cursor-pointer flex items-center gap-2" onClick={() => setViewMode('landing')}>
+            <SargGeoLogo size="small" />
+          </button>
           <span className="top-bar-pipe">|</span>
           <span className="top-bar-subtitle">Spatial Intelligence</span>
         </div>
-        <div className="top-bar-center">
+        <div className="top-bar-center flex items-center gap-2">
           <span className="top-bar-page-title">{activeTabLabel[activeTab] || 'Map View'}</span>
+          <button
+            type="button"
+            className="px-2.5 py-1 bg-slate-100 border border-slate-300 rounded-lg text-xs font-extrabold text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-1.5 cursor-pointer ml-2"
+            onClick={() => setViewMode('landing')}
+          >
+            <Home className="w-3.5 h-3.5 text-cyan-700" /> Overview & Splash
+          </button>
+          <button
+            type="button"
+            className="px-2.5 py-1 bg-slate-100 border border-slate-300 rounded-lg text-xs font-extrabold text-slate-700 hover:bg-slate-200 transition-all flex items-center gap-1.5 cursor-pointer"
+            onClick={() => setIsTosModalOpen(true)}
+          >
+            <Scale className="w-3.5 h-3.5 text-slate-600" /> Terms & Privacy
+          </button>
         </div>
         <div className="top-bar-right">
           {activeProject && (
@@ -629,6 +665,12 @@ export default function App() {
         projects={projects}
         onSelectProject={handleSelectProject}
         user={user}
+      />
+
+      {/* Terms of Service, Privacy Policy & Legal Disclaimers Modal */}
+      <TosModal
+        isOpen={isTosModalOpen}
+        onClose={() => setIsTosModalOpen(false)}
       />
     </div>
   );
