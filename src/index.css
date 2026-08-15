@@ -2914,6 +2914,166 @@ body, html, #root {
   background: rgba(226, 232, 240, 0.6);
 }
 
+/* BILLING STAT BOXES */
+.billing-stats-grid {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+@media (max-width: 640px) {
+  .billing-stats-grid {
+    flex-direction: column;
+  }
+}
+
+.billing-stat-box {
+  flex: 1;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* UPGRADE MODAL PREMIUM PRICING CARDS */
+.upgrade-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .upgrade-plans-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.upgrade-plan-card {
+  background: #ffffff;
+  border: 2px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 18px 16px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.upgrade-plan-card:hover {
+  border-color: #f59e0b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.15);
+}
+
+.upgrade-plan-card.selected {
+  border-color: #d97706 !important;
+  background: #fffdf5 !important;
+  box-shadow: 0 8px 24px rgba(217, 119, 6, 0.18) !important;
+  transform: translateY(-2px);
+}
+
+.upgrade-plan-badge {
+  position: absolute;
+  top: -12px;
+  right: 14px;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.upgrade-plan-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.upgrade-plan-title {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.upgrade-plan-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 6px 0;
+}
+
+.upgrade-plan-price {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.upgrade-plan-period {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.upgrade-plan-billing {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.upgrade-radio-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  shrink: 0;
+}
+
+.upgrade-plan-card.selected .upgrade-radio-circle {
+  border-color: #d97706;
+  background: #d97706;
+}
+
+.upgrade-features-box {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.upgrade-features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 10px;
+}
+
+@media (max-width: 640px) {
+  .upgrade-features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* LANDING / SPLASH PAGE STYLES */
 .landing-page-container {
   width: 100vw;

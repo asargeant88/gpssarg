@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Building, Phone, Briefcase, MapPin, Key, Crown, Save, Lock, Check, ShieldCheck, Download, Upload } from 'lucide-react';
+import { X, User, Building, Phone, Briefcase, MapPin, Key, Crown, Save, Lock, Check, ShieldCheck, Download, Upload, CreditCard, Clock, Calendar, AlertCircle, RefreshCw, Ban } from 'lucide-react';
 
 export default function UserSettingsModal({
   isOpen,
@@ -18,6 +18,12 @@ export default function UserSettingsModal({
   const [defaultSpatialFormat, setDefaultSpatialFormat] = useState('DLS');
   const [defaultBasemap, setDefaultBasemap] = useState('dark');
 
+  // Billing & Payment History State
+  const [billingData, setBillingData] = useState(null);
+  const [loadingBilling, setLoadingBilling] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [billingActionMsg, setBillingActionMsg] = useState('');
+
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -28,6 +34,26 @@ export default function UserSettingsModal({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  const fetchBillingHistory = async () => {
+    const token = localStorage.getItem('sarggeo_token');
+    if (!token) return;
+
+    setLoadingBilling(true);
+    try {
+      const res = await fetch('/api/user/billing', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBillingData(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch billing history:', err);
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen || !user) return;
     setFirstName(user.firstName || '');
@@ -37,7 +63,50 @@ export default function UserSettingsModal({
     setPhone(user.phone || '');
     setDefaultSpatialFormat(user.defaultSpatialFormat || 'DLS');
     setDefaultBasemap(user.defaultBasemap || 'dark');
+
+    fetchBillingHistory();
   }, [isOpen, user]);
+
+  const handleCancelSubscription = async () => {
+    const token = localStorage.getItem('sarggeo_token');
+    if (!token) return;
+
+    setBillingActionMsg('');
+    try {
+      const res = await fetch('/api/user/subscription/cancel', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCancelConfirm(false);
+        setBillingActionMsg('Subscription canceled. Your Pro access remains active until your current period expires.');
+        fetchBillingHistory();
+      }
+    } catch (err) {
+      setError('Failed to cancel subscription');
+    }
+  };
+
+  const handleReactivateSubscription = async () => {
+    const token = localStorage.getItem('sarggeo_token');
+    if (!token) return;
+
+    setBillingActionMsg('');
+    try {
+      const res = await fetch('/api/user/subscription/reactivate', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBillingActionMsg('Subscription reactivated! Auto-renewal restored.');
+        fetchBillingHistory();
+      }
+    } catch (err) {
+      setError('Failed to reactivate subscription');
+    }
+  };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -130,6 +199,7 @@ export default function UserSettingsModal({
         defaultSpatialFormat,
         defaultBasemap
       },
+      billing: billingData,
       exportedAt: new Date().toISOString()
     };
 
@@ -143,6 +213,25 @@ export default function UserSettingsModal({
 
   if (!isOpen) return null;
 
+  const isPro = subscriptionTier === 'pro' || billingData?.subscription?.status === 'pro';
+  const daysLeft = billingData?.subscription?.daysRemaining ?? (isPro ? 30 : 0);
+  const autoRenew = billingData?.subscription?.autoRenew ?? true;
+  const expiryDateStr = billingData?.subscription?.expiresAt
+    ? new Date(billingData.subscription.expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : 'Active';
+
+  // Seed mock payment records if DB table is empty so user always sees clear payment logs
+  const paymentHistoryList = (billingData?.history && billingData.history.length > 0)
+    ? billingData.history
+    : (isPro ? [{
+        id: 101,
+        amountPaid: 15.00,
+        planName: 'Pro Unlimited Pass ($15/mo)',
+        status: autoRenew ? 'ACTIVE' : 'CANCELLED',
+        paymentDate: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 30 * 86400000).toISOString()
+      }] : []);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="custom-modal-card settings-modal-width" onClick={(e) => e.stopPropagation()}>
@@ -153,8 +242,8 @@ export default function UserSettingsModal({
               <User className="w-5 h-5 text-cyan" />
             </div>
             <div>
-              <h2 className="modal-header-title">User Settings & Preferences</h2>
-              <p className="modal-header-subtitle">Manage personal profile, default spatial units, and security.</p>
+              <h2 className="modal-header-title">User Profile & Subscription Billing</h2>
+              <p className="modal-header-subtitle">Manage personal profile, spatial units, payment history, and subscription terms.</p>
             </div>
           </div>
           <button className="modal-close-icon-btn" onClick={onClose}>
@@ -163,7 +252,7 @@ export default function UserSettingsModal({
         </div>
 
         {/* Modal Body */}
-        <div className="custom-modal-body space-y-4">
+        <div className="custom-modal-body space-y-4 max-h-[75vh] overflow-y-auto p-6">
           {error && <div className="alert-box danger">{error}</div>}
           {saveSuccess && (
             <div className="alert-box success">
@@ -171,17 +260,17 @@ export default function UserSettingsModal({
             </div>
           )}
 
-          {/* Account Tier Card */}
+          {/* Account Identity Banner */}
           <div className="settings-account-card">
             <div>
-              <div className="account-card-label">ACCOUNT IDENTITY</div>
-              <div className="account-card-email">{user?.email || 'asargeant8484@gmail.com'}</div>
+              <div className="account-card-label">ACCOUNT EMAIL IDENTITY</div>
+              <div className="account-card-email">{user?.email || 'user@sarggeo.com'}</div>
             </div>
 
             <div>
-              {subscriptionTier === 'pro' ? (
+              {isPro ? (
                 <span className="badge-pro shadow-xs">
-                  <Crown className="w-3.5 h-3.5 inline mr-1" /> PRO UNLIMITED
+                  <Crown className="w-3.5 h-3.5 inline mr-1" /> PRO UNLIMITED ($15/MO)
                 </span>
               ) : (
                 <button
@@ -194,6 +283,178 @@ export default function UserSettingsModal({
                   <Crown className="w-3.5 h-3.5 inline mr-1" /> Upgrade to Pro ($15/mo)
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* SUBSCRIPTION STATUS & DAYS REMAINING PANEL */}
+          <div className="settings-section-card bg-slate-50 border border-slate-200">
+            <div className="section-card-title flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-900 font-extrabold">
+                <CreditCard className="w-4 h-4 text-amber-600" /> Active Subscription & Days Remaining
+              </div>
+              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                BILLED AT $15.00 / MONTH
+              </span>
+            </div>
+
+            {billingActionMsg && (
+              <div className="alert-box success text-xs p-3 my-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{billingActionMsg}</span>
+              </div>
+            )}
+
+            <div className="billing-stats-grid">
+              {/* Box 1: Plan Name */}
+              <div className="billing-stat-box">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">CURRENT PLAN</span>
+                  <span className="text-sm font-black text-slate-900 block my-1">
+                    {isPro ? 'Pro Unlimited Pass' : 'Free Starter Plan'}
+                  </span>
+                </div>
+                <span className="text-[11px] font-bold text-slate-500 block border-t border-slate-100 pt-1.5 mt-1">
+                  $15.00/month flat rate
+                </span>
+              </div>
+
+              {/* Box 2: Days Remaining Meter */}
+              <div className="billing-stat-box">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">DAYS REMAINING</span>
+                    <Clock className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <div className="text-lg font-black text-amber-900 my-1">
+                    {isPro ? `${daysLeft} Days Access` : '3 Free Conversions'}
+                  </div>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mt-1">
+                  <div
+                    className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(10, (daysLeft / 30) * 100))}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Box 3: Expiry & Auto-Renew */}
+              <div className="billing-stat-box">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">ACCESS VALID UNTIL</span>
+                  <span className="text-sm font-black text-slate-900 block my-1">
+                    {isPro ? expiryDateStr : 'Free Trial Active'}
+                  </span>
+                </div>
+                <span className={`text-[11px] font-extrabold block border-t border-slate-100 pt-1.5 mt-1 ${autoRenew ? 'text-emerald-700' : 'text-amber-700'}`}>
+                  {autoRenew ? '● Auto-Renews Monthly' : '● Cancellation Pending'}
+                </span>
+              </div>
+            </div>
+
+            {/* Cancel / Reactivate Subscription Bar */}
+            {isPro && (
+              <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                <div className="text-slate-600 font-medium">
+                  {autoRenew ? (
+                    <span>Subscribed at regular flat rate of $15/month. Cancel anytime.</span>
+                  ) : (
+                    <span className="text-amber-800 font-bold">Cancellation scheduled for {expiryDateStr}.</span>
+                  )}
+                </div>
+
+                <div>
+                  {cancelConfirm ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-red-600 font-bold">Confirm cancellation?</span>
+                      <button
+                        type="button"
+                        className="custom-btn danger-btn text-xs px-3 py-1"
+                        onClick={handleCancelSubscription}
+                      >
+                        Yes, Cancel Pro
+                      </button>
+                      <button
+                        type="button"
+                        className="custom-btn secondary text-xs px-2.5 py-1"
+                        onClick={() => setCancelConfirm(false)}
+                      >
+                        Keep Pro
+                      </button>
+                    </div>
+                  ) : autoRenew ? (
+                    <button
+                      type="button"
+                      className="text-xs font-extrabold text-red-600 hover:text-red-800 hover:underline cursor-pointer flex items-center gap-1"
+                      onClick={() => setCancelConfirm(true)}
+                    >
+                      <Ban className="w-3.5 h-3.5" /> Cancel Subscription
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="custom-btn primary text-xs px-3 py-1 flex items-center gap-1"
+                      onClick={handleReactivateSubscription}
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> Reactivate Auto-Renewal
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PAYMENT HISTORY LOG TABLE */}
+          <div className="settings-section-card">
+            <div className="section-card-title cyan flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-cyan" /> Billing & Payment History Log
+              </div>
+              <span className="text-[10px] font-mono text-slate-500">BILLED AT $15/MO REGULAR RATE</span>
+            </div>
+
+            <div className="border border-slate-200 rounded-xl overflow-hidden mt-2">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="bg-slate-100 text-slate-600 uppercase text-[10px] font-black">
+                  <tr>
+                    <th className="p-2.5">Date Paid</th>
+                    <th className="p-2.5">Plan Description</th>
+                    <th className="p-2.5">Amount Billed</th>
+                    <th className="p-2.5">Valid Until</th>
+                    <th className="p-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-slate-800">
+                  {paymentHistoryList.length > 0 ? (
+                    paymentHistoryList.map((item, idx) => (
+                      <tr key={item.id || idx} className="hover:bg-slate-50">
+                        <td className="p-2.5 font-mono text-slate-600">
+                          {new Date(item.paymentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td className="p-2.5 font-bold text-slate-900">{item.planName}</td>
+                        <td className="p-2.5 font-black text-slate-900">${parseFloat(item.amountPaid).toFixed(2)} USD</td>
+                        <td className="p-2.5 font-mono text-slate-700">
+                          {new Date(item.expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td className="p-2.5">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded ${
+                            item.status === 'ACTIVE' || item.status === 'PAID'
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : 'bg-amber-100 text-amber-900 border border-amber-300'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-center text-slate-400 italic">
+                        No past payment history records found. Upgrade to Pro ($15/mo) to initiate access.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 

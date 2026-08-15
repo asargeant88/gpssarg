@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Crown, CheckCircle2, Zap, ShieldCheck, CreditCard, Sparkles, Check, ExternalLink } from 'lucide-react';
+import { X, Crown, CheckCircle2, ShieldCheck, CreditCard, Sparkles, Check, ExternalLink } from 'lucide-react';
 
 export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, remainingFree = 0 }) {
   const [selectedPlan, setSelectedPlan] = useState('1year'); // '1month' | '6months' | '1year'
@@ -12,9 +12,9 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
       id: '1month',
       name: '1 Month Pass',
       price: '$15',
-      billing: 'Billed monthly',
+      billing: 'Billed monthly ($15.00/mo)',
       period: 'per month',
-      save: null,
+      badge: null,
       stripeUrl: 'https://buy.stripe.com/14AdRae0P0I72dk4sn0oM02',
       buyButtonId: 'buy_btn_1U4a8rJgpYIb9gi2VmTSny6a'
     },
@@ -24,7 +24,7 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
       price: '$75',
       billing: 'Billed semi-annually ($12.50/mo)',
       period: 'per 6 months',
-      save: 'SAVE 17%',
+      badge: '6 MONTH ACCESS',
       stripeUrl: 'https://buy.stripe.com/28E28s8Gv76vg4a5wr0oM01',
       buyButtonId: 'buy_btn_1U4a9DJgpYIb9gi2tLt95C3E'
     },
@@ -34,7 +34,7 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
       price: '$125',
       billing: 'Billed annually ($10.41/mo)',
       period: 'per year',
-      save: 'BEST VALUE - SAVE 30%',
+      badge: 'ANNUAL PASS',
       stripeUrl: 'https://buy.stripe.com/00waEY5uj76v19gaQL0oM00',
       buyButtonId: 'buy_btn_1U4a9fJgpYIb9gi22JUJE67x'
     }
@@ -97,7 +97,7 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
               <Crown className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <h2 className="modal-header-title">SargGeo Pro Unlimited Access</h2>
+              <h2 className="modal-header-title">SargGeo Pro Unlimited Spatial Access</h2>
               <p className="modal-header-subtitle">
                 {remainingFree <= 0
                   ? 'You reached your free test limit (3/3 conversions used). Upgrade to unlock unlimited spatial power.'
@@ -114,40 +114,36 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
         <div className="custom-modal-body space-y-5 p-6">
           {/* Plan Duration Selector Cards */}
           <div>
-            <label className="custom-field-label mb-2 block">SELECT SUBSCRIPTION PLAN DURATION</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label className="custom-field-label">SELECT SUBSCRIPTION PLAN DURATION</label>
+            <div className="upgrade-plans-grid">
               {Object.values(plans).map((plan) => {
                 const isSelected = selectedPlan === plan.id;
                 return (
                   <div
                     key={plan.id}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between relative ${
-                      isSelected
-                        ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-400/30'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                    }`}
+                    className={`upgrade-plan-card ${isSelected ? 'selected' : ''}`}
                     onClick={() => setSelectedPlan(plan.id)}
                   >
-                    {plan.save && (
-                      <span className="absolute -top-2.5 right-3 bg-amber-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
-                        {plan.save}
+                    {plan.badge && (
+                      <span className="upgrade-plan-badge">
+                        {plan.badge}
                       </span>
                     )}
 
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-black text-slate-900">{plan.name}</span>
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-amber-600 bg-amber-600' : 'border-slate-300'}`}>
+                      <div className="upgrade-plan-header-row">
+                        <span className="upgrade-plan-title">{plan.name}</span>
+                        <div className="upgrade-radio-circle">
                           {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                       </div>
-                      <div className="flex items-baseline gap-1 my-1">
-                        <span className="text-2xl font-black text-slate-900">{plan.price}</span>
-                        <span className="text-xs font-bold text-slate-500">{plan.period}</span>
+                      <div className="upgrade-plan-price-row">
+                        <span className="upgrade-plan-price">{plan.price}</span>
+                        <span className="upgrade-plan-period">{plan.period}</span>
                       </div>
                     </div>
 
-                    <p className="text-[11px] font-semibold text-slate-600 mt-2 border-t border-slate-100 pt-2">
+                    <p className="upgrade-plan-billing">
                       {plan.billing}
                     </p>
                   </div>
@@ -157,9 +153,9 @@ export default function UpgradeModal({ isOpen, onClose, user, onUpgradeSuccess, 
           </div>
 
           {/* Pro Feature Highlights Grid */}
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide block">INCLUDED IN PRO PLAN:</span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-slate-800">
+          <div className="upgrade-features-box">
+            <span className="text-[11px] font-black text-slate-800 uppercase tracking-wide block">INCLUDED IN PRO UNLIMITED ACCESS:</span>
+            <div className="upgrade-features-grid text-xs text-slate-800">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                 <span><strong>Unlimited Conversions</strong> (DLS/ATS, UTM, MGRS, DD, DMS, NTS)</span>

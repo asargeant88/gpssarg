@@ -78,6 +78,18 @@ async function initDb() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE IF NOT EXISTS payment_history (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        amount_paid NUMERIC(10, 2) NOT NULL,
+        plan_name VARCHAR(100) NOT NULL,
+        plan_period VARCHAR(50) NOT NULL,
+        status VARCHAR(50) DEFAULT 'PAID',
+        payment_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        stripe_payment_id VARCHAR(255)
+      );
+
       ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS company VARCHAR(150);
@@ -85,6 +97,9 @@ async function initDb() {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS default_spatial_format VARCHAR(50) DEFAULT 'DLS';
       ALTER TABLE users ADD COLUMN IF NOT EXISTS default_basemap VARCHAR(50) DEFAULT 'dark';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_auto_renew BOOLEAN DEFAULT TRUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_plan_name VARCHAR(100) DEFAULT 'Free Starter';
     `);
     console.log('Neon PostgreSQL Database connected and tables verified.');
   } catch (err) {
@@ -468,40 +483,182 @@ app.post('/api/conversion/track', async (req, res) => {
   }
 });
 
-// SUBSCRIBE TO $15/MONTH PRO TIER API
+// SUBSCRIBE TO PRO TIER API WITH PAYMENT RECORDING
 app.post('/api/subscribe/pro', async (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Please sign in or create an account to upgrade to Pro.' });
   }
 
+  const { planId = '1month' } = req.body;
+  let daysToAdd = 30;
+  let amountPaid = 15.00;
+  let planName = '1 Month Pass ($15/mo)';
+
+  if (planId === '6months') {
+    daysToAdd = 180;
+    amountPaid = 75.00;
+    planName = '6 Months Pass ($75)';
+  } else if (planId === '1year') {
+    daysToAdd = 365;
+    amountPaid = 125.00;
+    planName = '1 Year Full Pass ($125)';
+  }
+
   try {
+    const futureExpiry = new Date();
+    futureExpiry.setDate(futureExpiry.getDate() + daysToAdd);
+
     const updated = await pool.query(
-      'UPDATE users SET subscription_status = \'pro\' WHERE id = $1 RETURNING id, email, subscription_status, conversion_count',
-      [req.user.userId]
+      `UPDATE users
+       SET subscription_status = 'pro',
+           subscription_expires_at = $1,
+           subscription_auto_renew = TRUE,
+           subscription_plan_name = $2
+       WHERE id = $3
+       RETURNING id, email, subscription_status, conversion_count, subscription_expires_at, subscription_auto_renew, subscription_plan_name`,
+      [futureExpiry.toISOString(), planName, req.user.userId]
+    );
+
+    // Record in payment history table
+    await pool.query(
+      `INSERT INTO payment_history (user_id, amount_paid, plan_name, plan_period, status, expires_at)
+       VALUES ($1, $2, $3, $4, 'ACTIVE', $5)`,
+      [req.user.userId, amountPaid, planName, planId, futureExpiry.toISOString()]
     );
 
     // Reactivate any expired API keys
-    const futureExpiry = new Date();
-    futureExpiry.setDate(futureExpiry.getDate() + 30);
     await pool.query(
-      'UPDATE api_keys SET status = \'active\', expires_at = $1 WHERE user_id = $2',
+      `UPDATE api_keys SET status = 'active', expires_at = $1 WHERE user_id = $2`,
       [futureExpiry.toISOString(), req.user.userId]
     );
 
     const user = updated.rows[0];
     res.json({
       success: true,
-      message: 'Account upgraded to $15/month Pro tier! Unlimited conversions, API keys, & cloud projects unlocked.',
+      message: `Account upgraded to Pro tier (${planName})! Unlimited conversions, API keys, & cloud projects unlocked.`,
       user: {
         id: user.id,
         email: user.email,
         subscriptionStatus: user.subscription_status,
-        conversionCount: user.conversion_count
+        conversionCount: user.conversion_count,
+        subscriptionExpiresAt: user.subscription_expires_at,
+        subscriptionAutoRenew: user.subscription_auto_renew,
+        subscriptionPlanName: user.subscription_plan_name
       }
     });
   } catch (err) {
     console.error('Subscription error:', err);
     res.status(500).json({ error: 'Failed to update subscription.' });
+  }
+});
+
+// GET BILLING & PAYMENT HISTORY API
+app.get('/api/user/billing', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+
+  try {
+    const uRes = await pool.query(
+      `SELECT subscription_status, subscription_expires_at, subscription_auto_renew, subscription_plan_name, created_at
+       FROM users WHERE id = $1`,
+      [req.user.userId]
+    );
+
+    if (uRes.rows.length === 0) return res.status(404).json({ error: 'User not found.' });
+    const user = uRes.rows[0];
+
+    const historyRes = await pool.query(
+      `SELECT id, amount_paid, plan_name, plan_period, status, payment_date, expires_at
+       FROM payment_history
+       WHERE user_id = $1
+       ORDER BY payment_date DESC`,
+      [req.user.userId]
+    );
+
+    let expiresAt = user.subscription_expires_at;
+    if (!expiresAt && user.subscription_status === 'pro') {
+      const defaultExp = new Date();
+      defaultExp.setDate(defaultExp.getDate() + 30);
+      expiresAt = defaultExp.toISOString();
+    }
+
+    let daysRemaining = 0;
+    if (expiresAt) {
+      const expDate = new Date(expiresAt);
+      const now = new Date();
+      daysRemaining = Math.max(0, Math.ceil((expDate - now) / (1000 * 60 * 60 * 24)));
+    }
+
+    res.json({
+      subscription: {
+        status: user.subscription_status || 'free',
+        planName: user.subscription_plan_name || (user.subscription_status === 'pro' ? 'Pro Unlimited ($15/mo)' : 'Free Starter'),
+        expiresAt: expiresAt || null,
+        daysRemaining: user.subscription_status === 'pro' ? (daysRemaining || 30) : 0,
+        autoRenew: user.subscription_auto_renew ?? true
+      },
+      history: historyRes.rows.map(h => ({
+        id: h.id,
+        amountPaid: parseFloat(h.amount_paid),
+        planName: h.plan_name,
+        planPeriod: h.plan_period,
+        status: h.status,
+        paymentDate: h.payment_date,
+        expiresAt: h.expires_at
+      }))
+    });
+  } catch (err) {
+    console.error('Fetch billing error:', err);
+    res.status(500).json({ error: 'Failed to fetch billing history.' });
+  }
+});
+
+// CANCEL SUBSCRIPTION API
+app.post('/api/user/subscription/cancel', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+
+  try {
+    await pool.query(
+      `UPDATE users SET subscription_auto_renew = FALSE WHERE id = $1`,
+      [req.user.userId]
+    );
+
+    await pool.query(
+      `UPDATE payment_history SET status = 'CANCELLED' WHERE user_id = $1 AND status = 'ACTIVE'`,
+      [req.user.userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Subscription canceled. Your Pro access remains fully active until your current billing period expires.'
+    });
+  } catch (err) {
+    console.error('Cancel subscription error:', err);
+    res.status(500).json({ error: 'Failed to cancel subscription.' });
+  }
+});
+
+// REACTIVATE SUBSCRIPTION API
+app.post('/api/user/subscription/reactivate', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required.' });
+
+  try {
+    await pool.query(
+      `UPDATE users SET subscription_auto_renew = TRUE WHERE id = $1`,
+      [req.user.userId]
+    );
+
+    await pool.query(
+      `UPDATE payment_history SET status = 'ACTIVE' WHERE user_id = $1 AND expires_at > CURRENT_TIMESTAMP`,
+      [req.user.userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Subscription reactivated! Auto-renewal restored.'
+    });
+  } catch (err) {
+    console.error('Reactivate subscription error:', err);
+    res.status(500).json({ error: 'Failed to reactivate subscription.' });
   }
 });
 
