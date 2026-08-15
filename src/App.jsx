@@ -546,6 +546,8 @@ export default function App() {
         onAddWaypointsBatch={handleAddWaypointsBatch}
         onFlyTo={handleFlyTo}
         onCheckConversionLimit={checkConversionLimit}
+        activeProject={activeProject}
+        onAddPointToProject={handleAddPointToProject}
       />
 
       {/* User Login & Register Modal */}

@@ -12,9 +12,11 @@ import {
   Globe,
   Layers,
   Sparkles,
-  ArrowUpDown
+  ArrowUpDown,
+  UploadCloud,
+  FileText
 } from 'lucide-react';
-import { formatAllCoordinates } from '../utils/coordinateConverter';
+import { formatAllCoordinates, parseLocationInput } from '../utils/coordinateConverter';
 import { exportPoints } from '../utils/exporter';
 
 export default function ProjectSpreadsheetModal({
@@ -31,7 +33,7 @@ export default function ProjectSpreadsheetModal({
   const [sortField, setSortField] = useState('id');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  // New point form state
+  // Single row form state
   const [newTitle, setNewTitle] = useState('');
   const [newDls, setNewDls] = useState('');
   const [newLat, setNewLat] = useState('');
@@ -39,7 +41,144 @@ export default function ProjectSpreadsheetModal({
   const [newElev, setNewElev] = useState('');
   const [newNotes, setNewNotes] = useState('');
 
+  // Batch paste state
+  const [showBatchSection, setShowBatchSection] = useState(false);
+  const [batchInputText, setBatchInputText] = useState('');
+  const [batchParsedResults, setBatchParsedResults] = useState([]);
+  const [isImportingBatch, setIsImportingBatch] = useState(false);
+  const [importSuccessMsg, setImportSuccessMsg] = useState('');
+
   if (!isOpen || !activeProject) return null;
+
+  // Live parse batch input text
+  const handleBatchParse = (text) => {
+    setBatchInputText(text);
+    if (!text.trim()) {
+      setBatchParsedResults([]);
+      return;
+    }
+
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const parsedList = lines.map((line, idx) => {
+      // 1. Try parsing comma/tab separated row (Title, DLS/Lat, Lng, Elev, Notes)
+      const parts = line.split(/[,;\t]+/).map((p) => p.trim());
+      if (parts.length >= 2) {
+        const titlePart = parts[0];
+        const coordPart1 = parts[1];
+        const coordPart2 = parts[2];
+
+        // Check if parts[1] and parts[2] are numerical Lat, Lng
+        const numLat = parseFloat(coordPart1);
+        const numLng = parseFloat(coordPart2);
+        if (!isNaN(numLat) && !isNaN(numLng) && numLat >= 48 && numLat <= 60 && numLng >= -120 && numLng <= -100) {
+          const coords = formatAllCoordinates(numLat, numLng);
+          return {
+            id: idx + 1,
+            title: titlePart || 'Batch Point',
+            lat: numLat,
+            lng: numLng,
+            dls: coords.dls.shortFormatted,
+            elevation: parts[3] ? parseFloat(parts[3]) || null : null,
+            notes: parts.slice(4).join(', ') || 'CSV Batch Import',
+            isValid: true
+          };
+        }
+
+        // Try parsing parts[1] as DLS or coordinate string
+        const parsedDls = parseLocationInput(coordPart1);
+        if (parsedDls) {
+          const coords = formatAllCoordinates(parsedDls.lat, parsedDls.lng);
+          return {
+            id: idx + 1,
+            title: titlePart || 'Batch Point',
+            lat: parsedDls.lat,
+            lng: parsedDls.lng,
+            dls: coords.dls.shortFormatted,
+            elevation: parts[2] ? parseFloat(parts[2]) || null : null,
+            notes: parts.slice(3).join(', ') || 'CSV Batch Import',
+            isValid: true
+          };
+        }
+      }
+
+      // 2. Try parsing entire line as single location string (DLS or Lat/Lng pair)
+      const parsedSingle = parseLocationInput(line);
+      if (parsedSingle) {
+        const coords = formatAllCoordinates(parsedSingle.lat, parsedSingle.lng);
+        return {
+          id: idx + 1,
+          title: line,
+          lat: parsedSingle.lat,
+          lng: parsedSingle.lng,
+          dls: coords.dls.shortFormatted,
+          elevation: null,
+          notes: 'Batch Multi-Line Import',
+          isValid: true
+        };
+      }
+
+      return {
+        id: idx + 1,
+        rawInput: line,
+        isValid: false
+      };
+    });
+
+    setBatchParsedResults(parsedList);
+  };
+
+  // Submit Batch Import to Project
+  const handleExecuteBatchImport = async () => {
+    const validItems = batchParsedResults.filter((r) => r.isValid);
+    if (validItems.length === 0) {
+      alert('No valid parsed points found to import into project.');
+      return;
+    }
+
+    setIsImportingBatch(true);
+    setImportSuccessMsg('');
+
+    try {
+      for (const item of validItems) {
+        if (onAddPointToProject) {
+          await onAddPointToProject({
+            title: item.title,
+            dls: item.dls,
+            lat: item.lat,
+            lng: item.lng,
+            elevation: item.elevation,
+            notes: item.notes,
+            category: 'Batch Import'
+          });
+        }
+      }
+      setImportSuccessMsg(`Successfully imported ${validItems.length} batch points to project!`);
+      setBatchInputText('');
+      setBatchParsedResults([]);
+      setTimeout(() => setImportSuccessMsg(''), 4000);
+    } catch (e) {
+      alert('Failed to import some batch points.');
+    } finally {
+      setIsImportingBatch(false);
+    }
+  };
+
+  // Preset Handlers
+  const handleLoadPresetDls = () => {
+    const sample = `16-29-44-4 W4
+04-12-53-24 W4
+12-15-52-1 W5
+08-16-45-2 W4
+01-05-50-22 W4`;
+    handleBatchParse(sample);
+  };
+
+  const handleLoadPresetCsv = () => {
+    const sample = `Wellhead Site A, 16-29-44-4 W4, 645, Main Alberta Field
+Compressor Station 3, 04-12-53-24 W4, 712, Northern Access
+Pipeline Marker 109, 52.827063, -110.538848, 650, Inspection Marker`;
+    handleBatchParse(sample);
+  };
 
   // Filter points based on search query
   const filteredPoints = projectPoints.filter((pt) => {
@@ -116,6 +255,8 @@ export default function ProjectSpreadsheetModal({
     }
   };
 
+  const validBatchCount = batchParsedResults.filter((r) => r.isValid).length;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="custom-modal-card spreadsheet-modal-width" onClick={(e) => e.stopPropagation()}>
@@ -157,6 +298,13 @@ export default function ProjectSpreadsheetModal({
 
           <div className="flex items-center gap-2">
             <button
+              className={`custom-btn text-xs font-extrabold ${showBatchSection ? 'primary' : 'amber-pro-btn'}`}
+              onClick={() => setShowBatchSection(!showBatchSection)}
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>{showBatchSection ? 'Hide Batch Import' : 'Batch Add Multi-Points'}</span>
+            </button>
+            <button
               className="custom-btn secondary text-xs"
               onClick={() => exportPoints(projectPoints, 'csv', activeProject.name)}
             >
@@ -176,6 +324,82 @@ export default function ProjectSpreadsheetModal({
             </button>
           </div>
         </div>
+
+        {/* BATCH PASTE DRAWER / CONTAINER */}
+        {showBatchSection && (
+          <div className="batch-import-container">
+            <div className="batch-import-header">
+              <div className="flex items-center gap-2">
+                <UploadCloud className="w-4 h-4 text-cyan-800" />
+                <span className="batch-import-title">
+                  BATCH ADD POINTS TO PROJECT ({activeProject.name})
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="preset-label">Paste Presets:</span>
+                <button
+                  type="button"
+                  className="preset-btn"
+                  onClick={handleLoadPresetDls}
+                >
+                  DLS Preset
+                </button>
+                <button
+                  type="button"
+                  className="preset-btn"
+                  onClick={handleLoadPresetCsv}
+                >
+                  CSV Row Preset
+                </button>
+              </div>
+            </div>
+
+            {importSuccessMsg && (
+              <div className="alert-box success py-2 px-3">
+                <Check className="w-4 h-4 text-emerald-600" /> {importSuccessMsg}
+              </div>
+            )}
+
+            <div className="batch-import-body">
+              <div className="batch-textarea-wrapper">
+                <textarea
+                  className="batch-textarea mono-font"
+                  placeholder="Paste multi-line points (one per line):&#10;16-29-44-4 W4&#10;04-12-53-24 W4&#10;OR CSV: Wellhead Site A, 16-29-44-4 W4, 645m, Notes"
+                  value={batchInputText}
+                  onChange={(e) => handleBatchParse(e.target.value)}
+                />
+              </div>
+
+              <div className="batch-status-panel">
+                <div>
+                  <div className="status-panel-title">PARSED PREVIEW STATUS</div>
+                  <div className="status-row">
+                    <span>Total Lines:</span>
+                    <strong>{batchParsedResults.length}</strong>
+                  </div>
+                  <div className="status-row valid">
+                    <span>Valid Spatial Points:</span>
+                    <strong>{validBatchCount}</strong>
+                  </div>
+                  <div className="status-row invalid">
+                    <span>Invalid Lines:</span>
+                    <strong>{batchParsedResults.length - validBatchCount}</strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="custom-btn primary full text-xs py-2 justify-center"
+                  disabled={validBatchCount === 0 || isImportingBatch}
+                  onClick={handleExecuteBatchImport}
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{isImportingBatch ? 'Importing Batch...' : `Import ${validBatchCount} Valid Points to Project`}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Body / Table Grid */}
         <div className="custom-modal-body p-0 space-y-0 overflow-hidden flex-1">
@@ -262,7 +486,7 @@ export default function ProjectSpreadsheetModal({
                 {sortedPoints.length === 0 ? (
                   <tr>
                     <td colSpan="10" className="text-center py-12 text-slate-400 font-medium">
-                      No points match your spreadsheet search or no points saved in this project yet.
+                      No points match your spreadsheet search or no points saved in this project yet. Use 'Batch Add Multi-Points' above to paste points in bulk!
                     </td>
                   </tr>
                 ) : (

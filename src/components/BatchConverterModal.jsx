@@ -25,10 +25,43 @@ const SAMPLE_BATCHES = {
 11-20-42-3 W4`
 };
 
-export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBatch, onFlyTo, onCheckConversionLimit }) {
+export default function BatchConverterModal({
+  isOpen,
+  onClose,
+  onAddWaypointsBatch,
+  onFlyTo,
+  onCheckConversionLimit,
+  activeProject,
+  onAddPointToProject
+}) {
   const [rawInput, setRawInput] = useState(SAMPLE_BATCHES.dls);
   const [results, setResults] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [savedProjectMsg, setSavedProjectMsg] = useState('');
+
+  const handleSaveBatchToProject = async () => {
+    if (!activeProject) {
+      alert('Please select or create a hosted project first.');
+      return;
+    }
+    const validItems = results.filter((r) => r.isValid && r.lat != null && r.lng != null);
+    if (validItems.length === 0) return;
+
+    for (const item of validItems) {
+      if (onAddPointToProject) {
+        await onAddPointToProject({
+          title: item.dlsStr !== 'N/A' ? item.dlsStr : `Batch Point ${item.id}`,
+          dls: item.dlsStr !== 'N/A' ? item.dlsStr : '',
+          lat: item.lat,
+          lng: item.lng,
+          notes: `Batch Converted from "${item.rawInput}"`,
+          category: 'Batch Convert'
+        });
+      }
+    }
+    setSavedProjectMsg(`Saved ${validItems.length} points to ${activeProject.name}!`);
+    setTimeout(() => setSavedProjectMsg(''), 4000);
+  };
 
   // Convert lines whenever rawInput changes
   useEffect(() => {
@@ -348,12 +381,25 @@ export default function BatchConverterModal({ isOpen, onClose, onAddWaypointsBat
         {/* Modal Footer Actions */}
         <div className="photo-lsd-actions flex items-center justify-between p-4 bg-slate-900 border-t border-slate-800">
           <div className="text-xs text-slate-400">
-            Ready to plot <strong className="text-cyan-300">{validResults.length}</strong> valid converted point(s) onto map.
+            {savedProjectMsg ? (
+              <span className="text-emerald-400 font-extrabold">{savedProjectMsg}</span>
+            ) : (
+              <span>Ready to plot <strong className="text-cyan-300">{validResults.length}</strong> valid converted point(s) onto map.</span>
+            )}
           </div>
           <div className="flex gap-2">
             <button className="pane-btn secondary" onClick={onClose}>
               Close
             </button>
+            {activeProject && (
+              <button
+                className="custom-btn amber-pro-btn text-xs px-3 font-extrabold"
+                onClick={handleSaveBatchToProject}
+                disabled={validResults.length === 0}
+              >
+                Save Batch to {activeProject.name}
+              </button>
+            )}
             <button
               className="pane-btn primary"
               onClick={handlePlotAllOnMap}
