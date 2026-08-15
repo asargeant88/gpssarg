@@ -14,6 +14,7 @@ import ConverterModal from './components/ConverterModal';
 import JsonImportModal from './components/JsonImportModal';
 import RightProjectPanel from './components/RightProjectPanel';
 import ProjectSpreadsheetModal from './components/ProjectSpreadsheetModal';
+import SargGeoLogo from './components/SargGeoLogo';
 import { Globe } from 'lucide-react';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
@@ -405,10 +406,8 @@ export default function App() {
 
       {/* TOP HEADER BAR */}
       <header className="sarggeo-top-bar">
-        <div className="top-bar-left flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 shadow-2xs">
-            <Globe className="w-5 h-5" />
-          </div>
+        <div className="top-bar-left flex items-center gap-2.5">
+          <SargGeoLogo size="small" />
           <span className="top-bar-pipe">|</span>
           <span className="top-bar-subtitle">Spatial & Grid Atlas</span>
         </div>

@@ -2786,6 +2786,53 @@ body, html, #root {
   font-weight: 700;
 }
 
+/* SARGGEO BRAND 3D BLUE GLOBE LOGO STYLES */
+.sarggeo-logo-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  user-select: none;
+}
+
+.sarggeo-brand-text {
+  font-family: var(--font-brand);
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: -0.5px;
+  color: #0f172a;
+}
+
+.sarggeo-logo-container.small .sarggeo-brand-text {
+  font-size: 1.05rem;
+}
+
+.sarggeo-globe-wrapper {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sarggeo-logo-container.small .sarggeo-globe-wrapper,
+.sarggeo-globe-wrapper.small {
+  width: 24px;
+  height: 24px;
+}
+
+.sarggeo-globe-wrapper.medium {
+  width: 32px;
+  height: 32px;
+}
+
+.sarggeo-globe-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 2px 5px rgba(2, 132, 199, 0.4));
+}
+
+
 
 
 

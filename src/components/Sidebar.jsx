@@ -271,9 +271,7 @@ export default function Sidebar({
       <aside className="sarggeo-icon-dock">
         {/* Logo at top */}
         <div className="dock-logo flex items-center justify-center py-2">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 shadow-2xs">
-            <Globe className="w-5 h-5" />
-          </div>
+          <SargGeoLogo size="small" iconOnly={true} />
         </div>
 
         {/* Nav icon buttons */}
