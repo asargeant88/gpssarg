@@ -17,7 +17,7 @@ import ProjectSpreadsheetModal from './components/ProjectSpreadsheetModal';
 import SargGeoLogo from './components/SargGeoLogo';
 import LandingPage from './components/LandingPage';
 import TosModal from './components/TosModal';
-import { Globe, Scale, Home, Compass } from 'lucide-react';
+import { Globe, Scale, Home, Compass, LogOut, User as UserIcon } from 'lucide-react';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
 export default function App() {
@@ -450,18 +450,31 @@ export default function App() {
             <Scale className="w-3.5 h-3.5 text-slate-600" /> Terms & Privacy
           </button>
         </div>
-        <div className="top-bar-right">
+        <div className="top-bar-right flex items-center gap-2">
           {activeProject && (
             <span className="top-bar-project-badge">
               📁 {activeProject.name}
             </span>
           )}
           <button
-            className="top-bar-user-btn"
+            className="top-bar-user-btn flex items-center gap-1.5"
             onClick={user ? () => setIsUserSettingsModalOpen(true) : () => setIsAuthModalOpen(true)}
+            title="User Account & Billing Settings"
           >
+            <UserIcon className="w-3.5 h-3.5" />
             {user ? (user.firstName || user.email?.split('@')[0] || 'Account') : 'Sign In'}
           </button>
+
+          {user && (
+            <button
+              type="button"
+              className="px-2.5 py-1 bg-red-50 hover:bg-red-100 border border-red-300 rounded-lg text-xs font-extrabold text-red-700 transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+              onClick={handleSignOut}
+              title="Sign Out / Logout"
+            >
+              <LogOut className="w-3.5 h-3.5 text-red-600" /> Logout
+            </button>
+          )}
         </div>
       </header>
 
@@ -644,6 +657,7 @@ export default function App() {
         onUpdateUserProfile={(updatedUser) => setUser((prev) => ({ ...prev, ...updatedUser }))}
         onOpenUpgradeModal={() => setIsUpgradeModalOpen(true)}
         onOpenApiKeyModal={() => setIsApiKeyModalOpen(true)}
+        onSignOut={handleSignOut}
       />
 
       {/* Center Multi-Grid Coordinate Converter Modal */}

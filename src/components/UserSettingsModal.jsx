@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Building, Phone, Briefcase, MapPin, Key, Crown, Save, Lock, Check, ShieldCheck, Download, Upload, CreditCard, Clock, Calendar, AlertCircle, RefreshCw, Ban } from 'lucide-react';
+import { X, User, Building, Phone, Briefcase, MapPin, Key, Crown, Save, Lock, Check, ShieldCheck, Download, Upload, CreditCard, Clock, Calendar, AlertCircle, RefreshCw, Ban, LogOut } from 'lucide-react';
 
 export default function UserSettingsModal({
   isOpen,
@@ -8,7 +8,8 @@ export default function UserSettingsModal({
   subscriptionTier,
   onUpdateUserProfile,
   onOpenUpgradeModal,
-  onOpenApiKeyModal
+  onOpenApiKeyModal,
+  onSignOut
 }) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -267,7 +268,7 @@ export default function UserSettingsModal({
               <div className="account-card-email">{user?.email || 'user@sarggeo.com'}</div>
             </div>
 
-            <div>
+            <div className="flex items-center gap-2">
               {isPro ? (
                 <span className="badge-pro shadow-xs">
                   <Crown className="w-3.5 h-3.5 inline mr-1" /> PRO UNLIMITED ($15/MO)
@@ -281,6 +282,19 @@ export default function UserSettingsModal({
                   }}
                 >
                   <Crown className="w-3.5 h-3.5 inline mr-1" /> Upgrade to Pro ($15/mo)
+                </button>
+              )}
+
+              {user && onSignOut && (
+                <button
+                  type="button"
+                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-black flex items-center gap-1 cursor-pointer transition-all"
+                  onClick={() => {
+                    onSignOut();
+                    onClose();
+                  }}
+                >
+                  <LogOut className="w-3.5 h-3.5" /> Sign Out
                 </button>
               )}
             </div>
