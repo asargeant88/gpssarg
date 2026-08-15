@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Upload, FileCode, Check, AlertCircle, MapPin, FolderPlus, Eye, FileText, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Upload, FileCode, Check, AlertCircle, MapPin, FolderPlus, Eye, Folder, ChevronDown } from 'lucide-react';
 import { formatAllCoordinates, dlsToDd } from '../utils/coordinateConverter';
 
 export default function JsonImportModal({
@@ -9,6 +9,8 @@ export default function JsonImportModal({
   onAddPointToProject,
   onFlyTo,
   activeProject,
+  projects = [],
+  onSelectProject,
   user
 }) {
   const [inputText, setInputText] = useState('');
@@ -18,6 +20,12 @@ export default function JsonImportModal({
   const [successMsg, setSuccessMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isSavingToProject, setIsSavingToProject] = useState(false);
+  const [targetProject, setTargetProject] = useState(activeProject);
+
+  useEffect(() => {
+    if (activeProject) setTargetProject(activeProject);
+    else if (projects && projects.length > 0) setTargetProject(projects[0]);
+  }, [activeProject, projects]);
 
   // KML / KMZ XML Parser
   const parseKmlContent = (xmlString) => {
@@ -220,7 +228,17 @@ export default function JsonImportModal({
   };
 
   const handleSaveToProject = async () => {
-    if (!parsedData || parsedData.length === 0 || !activeProject) return;
+    if (!parsedData || parsedData.length === 0) return;
+
+    const projToUse = targetProject || activeProject;
+    if (!projToUse) {
+      setError('Please select or create a target project first.');
+      return;
+    }
+
+    if (onSelectProject && projToUse.id !== activeProject?.id) {
+      onSelectProject(projToUse);
+    }
 
     setIsSavingToProject(true);
     let count = 0;
@@ -239,8 +257,8 @@ export default function JsonImportModal({
       }
     }
     setIsSavingToProject(false);
-    setSuccessMsg(`Saved ${count} points directly to project "${activeProject.name}"!`);
-    setTimeout(() => onClose(), 1500);
+    setSuccessMsg(`Successfully saved ${count} imported points to project "${projToUse.name}"!`);
+    setTimeout(() => onClose(), 1800);
   };
 
   if (!isOpen) return null;
@@ -266,6 +284,42 @@ export default function JsonImportModal({
 
         {/* Modal Body */}
         <div className="custom-modal-body space-y-4">
+          {/* Target Project Selector Banner */}
+          <div className="p-3 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Folder className="w-4 h-4 text-amber-600 shrink-0" />
+              <span className="font-extrabold text-slate-800">Target Save Project:</span>
+              {targetProject ? (
+                <span className="font-black text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded text-[11px]">
+                  {targetProject.name}
+                </span>
+              ) : (
+                <span className="text-slate-500 italic">No active project</span>
+              )}
+            </div>
+
+            {projects && projects.length > 0 && (
+              <select
+                className="custom-modal-input text-xs py-1 px-2.5 max-w-[210px] font-bold text-slate-800"
+                value={targetProject ? targetProject.id : ''}
+                onChange={(e) => {
+                  const found = projects.find((p) => String(p.id) === String(e.target.value));
+                  if (found) {
+                    setTargetProject(found);
+                    if (onSelectProject) onSelectProject(found);
+                  }
+                }}
+              >
+                <option value="" disabled>Select Target Project...</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    📁 {p.name} ({p.waypoints_count || 0} points)
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
           {/* Drag & Drop File Zone */}
           <div
             className={`p-6 border-2 border-dashed rounded-xl text-center transition-all ${
@@ -362,26 +416,38 @@ export default function JsonImportModal({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                {activeProject && (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <div className="text-[11px] text-slate-500 font-medium">
+                  {targetProject ? (
+                    <span>Click amber button to save all {parsedData.length} points to <strong className="text-slate-800">{targetProject.name}</strong></span>
+                  ) : (
+                    <span>Select target project above to enable project saving</span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
                   <button
                     type="button"
-                    disabled={isSavingToProject}
+                    disabled={isSavingToProject || !targetProject}
                     className="custom-btn amber-pro-btn text-xs font-extrabold px-4 py-2.5"
                     onClick={handleSaveToProject}
                   >
                     <FolderPlus className="w-4 h-4 mr-1.5" />
-                    {isSavingToProject ? 'Saving...' : `Save ${parsedData.length} Points to ${activeProject.name}`}
+                    {isSavingToProject
+                      ? 'Saving to Project...'
+                      : targetProject
+                      ? `Save ${parsedData.length} Points to ${targetProject.name}`
+                      : 'Select Target Project First'}
                   </button>
-                )}
 
-                <button
-                  type="button"
-                  className="custom-btn primary text-xs font-extrabold px-5 py-2.5"
-                  onClick={handlePlotOnMap}
-                >
-                  <MapPin className="w-4 h-4 mr-1.5" /> Plot All ({parsedData.length}) on Map
-                </button>
+                  <button
+                    type="button"
+                    className="custom-btn primary text-xs font-extrabold px-5 py-2.5"
+                    onClick={handlePlotOnMap}
+                  >
+                    <MapPin className="w-4 h-4 mr-1.5" /> Plot All ({parsedData.length}) on Map
+                  </button>
+                </div>
               </div>
             </div>
           )}

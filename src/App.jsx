@@ -626,6 +626,8 @@ export default function App() {
         onAddPointToProject={handleAddPointToProject}
         onFlyTo={handleFlyTo}
         activeProject={activeProject}
+        projects={projects}
+        onSelectProject={handleSelectProject}
         user={user}
       />
     </div>
