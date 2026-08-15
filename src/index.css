@@ -460,17 +460,21 @@ body, html, #root {
 
 .sarggeo-brand-text {
   font-family: var(--font-brand);
-  font-weight: 800;
-  font-size: 1.6rem;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #ffffff 0%, #e0f2fe 60%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+  font-weight: 900 !important;
+  font-size: 1.35rem !important;
+  letter-spacing: -0.6px;
+  color: #020617 !important; /* Pitch black solid text */
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #020617 !important;
+  text-shadow: none !important;
+  line-height: 1;
 }
 
 .sarggeo-logo-container.small .sarggeo-brand-text {
-  font-size: 1.2rem;
+  font-size: 1.25rem !important;
+  color: #020617 !important;
+  -webkit-text-fill-color: #020617 !important;
 }
 
 .sarggeo-globe-wrapper {
@@ -2786,7 +2790,25 @@ body, html, #root {
   font-weight: 700;
 }
 
-/* SARGGEO BRAND 3D BLUE GLOBE LOGO STYLES */
+/* SARGGEO TOP HEADER BAR STYLES */
+.sarggeo-top-bar {
+  height: 48px;
+  background: #ffffff;
+  border-bottom: 1px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 9500;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .sarggeo-logo-container {
   display: inline-flex;
   align-items: center;
@@ -2796,28 +2818,36 @@ body, html, #root {
 
 .sarggeo-brand-text {
   font-family: var(--font-brand);
-  font-weight: 900;
-  font-size: 1.15rem;
-  letter-spacing: -0.5px;
-  color: #0f172a;
+  font-weight: 900 !important;
+  font-size: 1.35rem !important;
+  letter-spacing: -0.6px;
+  color: #020617 !important; /* Pitch black high-contrast */
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #020617 !important;
+  text-shadow: none !important;
+  line-height: 1;
 }
 
 .sarggeo-logo-container.small .sarggeo-brand-text {
-  font-size: 1.05rem;
+  font-size: 1.25rem !important;
+  color: #020617 !important;
+  -webkit-text-fill-color: #020617 !important;
 }
 
 .sarggeo-globe-wrapper {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin-left: 1px;
 }
 
 .sarggeo-logo-container.small .sarggeo-globe-wrapper,
 .sarggeo-globe-wrapper.small {
-  width: 24px;
-  height: 24px;
+  width: 25px;
+  height: 25px;
 }
 
 .sarggeo-globe-wrapper.medium {
@@ -2829,8 +2859,30 @@ body, html, #root {
   width: 100%;
   height: 100%;
   overflow: visible;
-  filter: drop-shadow(0 2px 5px rgba(2, 132, 199, 0.4));
+  filter: drop-shadow(0 2px 5px rgba(2, 132, 199, 0.45));
 }
+
+.top-bar-pipe {
+  color: #cbd5e1;
+  font-weight: 300;
+  font-size: 1rem;
+}
+
+.top-bar-subtitle {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.06);
+}
+
 
 
 

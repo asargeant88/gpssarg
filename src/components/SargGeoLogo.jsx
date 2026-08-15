@@ -106,7 +106,18 @@ export default function SargGeoLogo({ size = 'medium', iconOnly = false, classNa
 
   return (
     <div className={`sarggeo-logo-container ${size} ${className}`}>
-      <span className="sarggeo-brand-text">SargGe</span>
+      <span
+        className="sarggeo-brand-text"
+        style={{
+          color: '#020617',
+          WebkitTextFillColor: '#020617',
+          fontWeight: 900,
+          background: 'none',
+          opacity: 1
+        }}
+      >
+        SargGe
+      </span>
       <div className="sarggeo-globe-wrapper" title="SargGeo Spatial Globe">
         {globeSvg}
       </div>

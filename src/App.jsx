@@ -409,7 +409,7 @@ export default function App() {
         <div className="top-bar-left flex items-center gap-2.5">
           <SargGeoLogo size="small" />
           <span className="top-bar-pipe">|</span>
-          <span className="top-bar-subtitle">Spatial & Grid Atlas</span>
+          <span className="top-bar-subtitle">Spatial Intelligence</span>
         </div>
         <div className="top-bar-center">
           <span className="top-bar-page-title">{activeTabLabel[activeTab] || 'Map View'}</span>
