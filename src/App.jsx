@@ -618,11 +618,12 @@ export default function App() {
         onCheckConversionLimit={checkConversionLimit}
       />
 
-      {/* Center JSON Data Import Modal */}
+      {/* Center Spatial Data Import Modal (KML / KMZ / GeoJSON / CSV / JSON) */}
       <JsonImportModal
         isOpen={isJsonImportModalOpen}
         onClose={() => setIsJsonImportModalOpen(false)}
         onAddWaypointsBatch={handleAddWaypointsBatch}
+        onAddPointToProject={handleAddPointToProject}
         onFlyTo={handleFlyTo}
         activeProject={activeProject}
         user={user}

@@ -48,93 +48,97 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="auth-modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="flex items-center gap-2">
-            <div className="modal-icon-badge">
-              <ShieldCheck className="w-5 h-5 text-amber-400" />
+      <div className="custom-modal-card auth-modal-width" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="custom-modal-header">
+          <div className="modal-header-left">
+            <div className="modal-icon-badge cyan">
+              <ShieldCheck className="w-5 h-5 text-cyan" />
             </div>
             <div>
-              <h2 className="modal-title">{isLogin ? 'Sign In to SargGeo' : 'Create SargGeo Account'}</h2>
-              <p className="modal-subtitle">Save projects, sync waypoints to cloud DB, and upgrade to Pro.</p>
+              <h2 className="modal-header-title">{isLogin ? 'Sign In to SargGeo' : 'Create SargGeo Account'}</h2>
+              <p className="modal-header-subtitle">Save projects, sync waypoints to cloud DB, and upgrade to Pro.</p>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <button className="modal-close-icon-btn" onClick={onClose}>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {error && (
-          <div className="error-alert m-4 mb-0 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="auth-form p-6 space-y-4">
-          <div>
-            <label className="field-label">EMAIL ADDRESS</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="email"
-                required
-                className="modal-input pl-9"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        {/* Body */}
+        <div className="custom-modal-body space-y-4">
+          {error && (
+            <div className="alert-box error flex items-center gap-2 mb-2 p-3 text-xs">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
             </div>
-          </div>
+          )}
 
-          <div>
-            <label className="field-label">PASSWORD</label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="password"
-                required
-                minLength={4}
-                className="modal-input pl-9"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="custom-field-label">EMAIL ADDRESS</label>
+              <div className="custom-input-relative">
+                <Mail className="custom-input-icon" />
+                <input
+                  type="email"
+                  required
+                  className="custom-modal-input with-icon"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="pane-btn primary full text-sm py-2.5 font-bold"
-            style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', marginTop: '20px' }}
-          >
-            {loading ? (
-              'Processing...'
-            ) : isLogin ? (
-              <>
-                <LogIn className="w-4 h-4 mr-1.5 inline" /> Sign In
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4 mr-1.5 inline" /> Create Free Account
-              </>
-            )}
-          </button>
+            <div>
+              <label className="custom-field-label">PASSWORD</label>
+              <div className="custom-input-relative">
+                <Lock className="custom-input-icon" />
+                <input
+                  type="password"
+                  required
+                  minLength={4}
+                  className="custom-modal-input with-icon"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
 
-          <div className="text-center pt-2">
             <button
-              type="button"
-              className="text-xs text-cyan-400 hover:underline cursor-pointer"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError('');
-              }}
+              type="submit"
+              disabled={loading}
+              className="custom-btn primary full py-3 text-xs font-extrabold justify-center shadow-xs"
+              style={{ marginTop: '20px' }}
             >
-              {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              {loading ? (
+                'Processing...'
+              ) : isLogin ? (
+                <>
+                  <LogIn className="w-4 h-4 mr-1.5" /> Sign In
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-1.5" /> Create Free Account
+                </>
+              )}
             </button>
-          </div>
-        </form>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                className="text-xs font-extrabold text-cyan-800 hover:text-cyan-950 hover:underline cursor-pointer"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
+                }}
+              >
+                {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

@@ -1,39 +1,99 @@
 import React, { useState } from 'react';
-import { X, Upload, FileJson, Check, AlertCircle, MapPin, Database, Eye, Code, Layers } from 'lucide-react';
-import { formatAllCoordinates, dlsToDd, utmToDd, parseLocationInput } from '../utils/coordinateConverter';
+import { X, Upload, FileCode, Check, AlertCircle, MapPin, FolderPlus, Eye, FileText, Globe } from 'lucide-react';
+import { formatAllCoordinates, dlsToDd } from '../utils/coordinateConverter';
 
 export default function JsonImportModal({
   isOpen,
   onClose,
   onAddWaypointsBatch,
+  onAddPointToProject,
   onFlyTo,
   activeProject,
   user
 }) {
-  const [jsonText, setJsonText] = useState('');
+  const [inputText, setInputText] = useState('');
   const [parsedData, setParsedData] = useState(null);
-  const [importType, setImportType] = useState(null); // 'geojson', 'waypoints', 'project', 'profile'
+  const [importFormat, setImportFormat] = useState(null); // KML, KMZ, GeoJSON, CSV, JSON
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isSavingToProject, setIsSavingToProject] = useState(false);
 
-  const parseAndValidateJson = (content) => {
+  // KML / KMZ XML Parser
+  const parseKmlContent = (xmlString) => {
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+      const placemarks = xmlDoc.getElementsByTagName('Placemark');
+      const points = [];
+
+      for (let i = 0; i < placemarks.length; i++) {
+        const pm = placemarks[i];
+        const nameNode = pm.getElementsByTagName('name')[0];
+        const name = nameNode ? nameNode.textContent.trim() : `KML Point ${i + 1}`;
+        const descNode = pm.getElementsByTagName('description')[0];
+        const desc = descNode ? descNode.textContent.trim() : '';
+
+        const coordsNode = pm.getElementsByTagName('coordinates')[0];
+        if (coordsNode) {
+          const rawCoords = coordsNode.textContent.trim().split(/\s+/);
+          for (const coordStr of rawCoords) {
+            const parts = coordStr.split(',');
+            if (parts.length >= 2) {
+              const lng = parseFloat(parts[0]);
+              const lat = parseFloat(parts[1]);
+              const elev = parts[2] ? parseFloat(parts[2]) : null;
+
+              if (!isNaN(lat) && !isNaN(lng)) {
+                const coords = formatAllCoordinates(lat, lng);
+                points.push({
+                  title: name,
+                  notes: desc || 'Imported from KML/KMZ',
+                  lat,
+                  lng,
+                  elevation: elev,
+                  dls: coords.dls.shortFormatted,
+                  category: 'KML/KMZ Import'
+                });
+              }
+            }
+          }
+        }
+      }
+      return points;
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const parseInputData = (content, fileName = '') => {
     setError('');
     setSuccessMsg('');
     setParsedData(null);
-    setImportType(null);
+    setImportFormat(null);
 
     if (!content || !content.trim()) return;
 
+    // 1. Try KML / KMZ XML parsing first if string contains <kml or <Placemark
+    if (content.includes('<kml') || content.includes('<Placemark') || fileName.endsWith('.kml') || fileName.endsWith('.kmz')) {
+      const kmlPoints = parseKmlContent(content);
+      if (kmlPoints.length > 0) {
+        setParsedData(kmlPoints);
+        setImportFormat(fileName.endsWith('.kmz') ? 'KMZ' : 'KML');
+        return;
+      }
+    }
+
+    // 2. Try JSON / GeoJSON
     try {
       const obj = JSON.parse(content);
 
-      // 1. GeoJSON FeatureCollection
+      // GeoJSON FeatureCollection
       if (obj.type === 'FeatureCollection' && Array.isArray(obj.features)) {
         const points = [];
         obj.features.forEach((feat, idx) => {
           if (feat.geometry && feat.geometry.type === 'Point' && Array.isArray(feat.geometry.coordinates)) {
-            const [lng, lat] = feat.geometry.coordinates;
+            const [lng, lat, elev] = feat.geometry.coordinates;
             const props = feat.properties || {};
             const coords = formatAllCoordinates(lat, lng);
             points.push({
@@ -41,7 +101,8 @@ export default function JsonImportModal({
               notes: props.description || props.notes || 'Imported from GeoJSON',
               lat,
               lng,
-              dls: coords.dls.formatted,
+              elevation: elev || null,
+              dls: coords.dls.shortFormatted,
               category: props.category || 'GeoJSON'
             });
           }
@@ -49,11 +110,11 @@ export default function JsonImportModal({
 
         if (points.length === 0) throw new Error('No valid Point geometries found in GeoJSON FeatureCollection.');
         setParsedData(points);
-        setImportType('geojson');
+        setImportFormat('GeoJSON');
         return;
       }
 
-      // 2. SargGeo Waypoints JSON Array or Wrapped JSON
+      // Waypoint JSON Array
       let rawList = Array.isArray(obj) ? obj : (obj.waypoints || obj.points || obj.data);
       if (Array.isArray(rawList)) {
         const points = [];
@@ -77,7 +138,8 @@ export default function JsonImportModal({
               notes: item.notes || item.description || '',
               lat,
               lng,
-              dls: coords.dls.formatted,
+              elevation: item.elevation || item.elev || null,
+              dls: item.dls || coords.dls.shortFormatted,
               category: item.category || 'Imported'
             });
           }
@@ -85,21 +147,46 @@ export default function JsonImportModal({
 
         if (points.length === 0) throw new Error('No valid coordinate objects found in JSON array.');
         setParsedData(points);
-        setImportType('waypoints');
+        setImportFormat('JSON');
         return;
       }
+    } catch (e) {}
 
-      // 3. User Profile Config JSON
-      if (obj.email || obj.defaultSpatialFormat || obj.defaultBasemap) {
-        setParsedData([obj]);
-        setImportType('profile');
-        return;
+    // 3. Try Multi-Line DLS / CSV parsing
+    const lines = content.split('\n');
+    const csvPoints = [];
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const parts = trimmed.split(/,|\t/);
+      let title = `Point ${idx + 1}`;
+      let locStr = trimmed;
+
+      if (parts.length >= 2) {
+        title = parts[0].trim();
+        locStr = parts[1].trim();
       }
 
-      throw new Error('Unrecognized JSON structure. Provide GeoJSON or an array of waypoint objects with lat/lng.');
-    } catch (err) {
-      setError(`JSON Parsing Error: ${err.message}`);
+      const dlsParsed = dlsToDd(locStr);
+      if (dlsParsed && dlsParsed.isValid) {
+        csvPoints.push({
+          title,
+          notes: parts[3] ? parts[3].trim() : 'CSV Multi-Line Import',
+          lat: dlsParsed.lat,
+          lng: dlsParsed.lng,
+          dls: dlsParsed.formattedDls,
+          category: 'CSV Import'
+        });
+      }
+    });
+
+    if (csvPoints.length > 0) {
+      setParsedData(csvPoints);
+      setImportFormat('CSV / DLS');
+      return;
     }
+
+    setError('Could not parse file. Please select a valid KML, KMZ, GeoJSON, CSV, or JSON file.');
   };
 
   const handleFileUpload = (file) => {
@@ -107,8 +194,8 @@ export default function JsonImportModal({
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target.result;
-      setJsonText(content);
-      parseAndValidateJson(content);
+      setInputText(content);
+      parseInputData(content, file.name);
     };
     reader.readAsText(file);
   };
@@ -121,128 +208,179 @@ export default function JsonImportModal({
     }
   };
 
-  const handleImportToMap = () => {
+  const handlePlotOnMap = () => {
     if (!parsedData || parsedData.length === 0) return;
 
-    if (importType === 'geojson' || importType === 'waypoints') {
-      if (onAddWaypointsBatch) onAddWaypointsBatch(parsedData);
-      if (onFlyTo && parsedData[0]) {
-        onFlyTo(parsedData[0].lat, parsedData[0].lng, 13);
-      }
-      setSuccessMsg(`Successfully imported ${parsedData.length} points onto the map canvas!`);
-      setTimeout(() => onClose(), 1500);
+    if (onAddWaypointsBatch) onAddWaypointsBatch(parsedData);
+    if (onFlyTo && parsedData[0]) {
+      onFlyTo(parsedData[0].lat, parsedData[0].lng, 13);
     }
+    setSuccessMsg(`Successfully plotted ${parsedData.length} points onto map!`);
+    setTimeout(() => onClose(), 1500);
+  };
+
+  const handleSaveToProject = async () => {
+    if (!parsedData || parsedData.length === 0 || !activeProject) return;
+
+    setIsSavingToProject(true);
+    let count = 0;
+    for (const pt of parsedData) {
+      if (onAddPointToProject) {
+        await onAddPointToProject({
+          title: pt.title,
+          dls: pt.dls,
+          lat: pt.lat,
+          lng: pt.lng,
+          notes: pt.notes,
+          elevation: pt.elevation || null,
+          category: pt.category || 'Spatial Import'
+        });
+        count++;
+      }
+    }
+    setIsSavingToProject(false);
+    setSuccessMsg(`Saved ${count} points directly to project "${activeProject.name}"!`);
+    setTimeout(() => onClose(), 1500);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="batch-modal-content" style={{ width: '720px' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="flex items-center gap-2">
-            <div className="modal-icon-badge" style={{ background: 'rgba(56, 189, 248, 0.15)', borderColor: 'rgba(56, 189, 248, 0.3)' }}>
-              <FileJson className="w-5 h-5 text-cyan-400" />
+      <div className="custom-modal-card import-modal-width" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="custom-modal-header">
+          <div className="modal-header-left">
+            <div className="modal-icon-badge cyan">
+              <FileCode className="w-5 h-5 text-cyan" />
             </div>
             <div>
-              <h2 className="modal-title">JSON Data Importer</h2>
-              <p className="modal-subtitle">Import GeoJSON features, Waypoint arrays, and Project JSON bundles.</p>
+              <h2 className="modal-header-title">Spatial Data Importer</h2>
+              <p className="modal-header-subtitle">Import KMZ, KML, GeoJSON, CSV & JSON files directly to project or map canvas.</p>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <button className="modal-close-icon-btn" onClick={onClose}>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto" style={{ maxHeight: '75vh' }}>
-          {/* Drag and Drop Zone */}
+        {/* Modal Body */}
+        <div className="custom-modal-body space-y-4">
+          {/* Drag & Drop File Zone */}
           <div
-            className={`p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all ${
-              isDragging ? 'border-cyan-400 bg-cyan-950/30' : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
+            className={`p-6 border-2 border-dashed rounded-xl text-center transition-all ${
+              isDragging ? 'border-cyan-600 bg-cyan-50' : 'border-slate-300 bg-slate-50 hover:border-slate-400'
             }`}
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            onClick={() => document.getElementById('json-file-input').click()}
           >
             <input
               type="file"
-              id="json-file-input"
-              accept=".json,.geojson"
-              className="hidden"
+              id="spatial-data-file-input"
+              accept=".kml,.kmz,.geojson,.json,.csv,.txt"
+              style={{ display: 'none' }}
               onChange={(e) => e.target.files[0] && handleFileUpload(e.target.files[0])}
             />
-            <Upload className="w-8 h-8 text-cyan-400 mx-auto mb-2" />
-            <span className="text-xs font-bold text-slate-200">Drag & Drop `.json` or `.geojson` file here</span>
-            <p className="text-[11px] text-slate-400 mt-1">Or click to select file from disk</p>
+            <Upload className="w-8 h-8 text-cyan-700 mx-auto mb-2" />
+            <div className="text-xs font-black text-slate-900 mb-1">
+              Drag & Drop <span className="text-cyan-800 font-mono">.kml, .kmz, .geojson, .csv, .json</span> file here
+            </div>
+            <button
+              type="button"
+              className="custom-btn secondary text-xs px-4 py-1.5 mt-2"
+              onClick={() => document.getElementById('spatial-data-file-input').click()}
+            >
+              Browse Files...
+            </button>
           </div>
 
-          {/* Paste JSON Raw Input */}
-          <div className="space-y-2">
-            <label className="field-label text-cyan-400">OR PASTE RAW JSON TEXT</label>
+          {/* Paste Raw Data */}
+          <div>
+            <label className="custom-field-label">OR PASTE RAW KML, GEOJSON, OR CSV TEXT</label>
             <textarea
-              className="modal-input mono text-xs bg-slate-950 border-slate-800 text-cyan-300 p-3 h-28 resize-none"
-              placeholder='[ { "title": "Well 1", "lat": 52.827, "lng": -110.538, "dls": "16-29-44-4 W4" } ]'
-              value={jsonText}
+              className="custom-modal-input mono-font text-xs h-28 resize-none"
+              placeholder='Paste KML XML string, GeoJSON FeatureCollection, or multi-line DLS points...'
+              value={inputText}
               onChange={(e) => {
-                setJsonText(e.target.value);
-                parseAndValidateJson(e.target.value);
+                setInputText(e.target.value);
+                parseInputData(e.target.value);
               }}
             />
           </div>
 
-          {error && <div className="error-alert text-xs">{error}</div>}
-          {successMsg && (
-            <div className="p-3 bg-emerald-950/60 border border-emerald-500/60 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-400" /> {successMsg}
+          {error && (
+            <div className="alert-box error text-xs p-3">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          {/* Parsed JSON Preview Table */}
+          {successMsg && (
+            <div className="alert-box success text-xs p-3">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* Parsed Preview Table */}
           {parsedData && parsedData.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2 border-t border-slate-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs font-bold text-slate-200 uppercase">
-                    JSON PREVIEW — {parsedData.length} {importType === 'geojson' ? 'GeoJSON Points' : 'Waypoints'} DETECTED
+                  <Eye className="w-4 h-4 text-slate-700" />
+                  <span className="text-xs font-black text-slate-900 uppercase">
+                    PARSED PREVIEW — {parsedData.length} POINTS DETECTED
                   </span>
                 </div>
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  {importType?.toUpperCase()} FORMAT
+                <span className="text-[11px] font-black uppercase px-2.5 py-0.5 rounded bg-cyan-100 text-cyan-900 border border-cyan-200">
+                  {importFormat} FORMAT
                 </span>
               </div>
 
-              <div className="border border-slate-800 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+              <div className="border border-slate-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold sticky top-0">
+                  <thead className="bg-slate-100 text-slate-600 uppercase text-[10px] font-black sticky top-0">
                     <tr>
-                      <th className="p-2">Title</th>
-                      <th className="p-2">Latitude</th>
-                      <th className="p-2">Longitude</th>
-                      <th className="p-2">DLS / ATS Location</th>
+                      <th className="p-2.5">Title</th>
+                      <th className="p-2.5">Latitude</th>
+                      <th className="p-2.5">Longitude</th>
+                      <th className="p-2.5">DLS / Location</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-200">
+                  <tbody className="divide-y divide-slate-200 text-slate-800">
                     {parsedData.map((pt, idx) => (
-                      <tr key={idx} className="hover:bg-slate-900/60">
-                        <td className="p-2 font-bold text-cyan-300">{pt.title}</td>
-                        <td className="p-2 mono">{pt.lat ? pt.lat.toFixed(6) : '-'}</td>
-                        <td className="p-2 mono">{pt.lng ? pt.lng.toFixed(6) : '-'}</td>
-                        <td className="p-2 text-amber-300">{pt.dls || '-'}</td>
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-2.5 font-bold text-slate-900">{pt.title}</td>
+                        <td className="p-2.5 mono-font">{pt.lat ? pt.lat.toFixed(6) : '-'}</td>
+                        <td className="p-2.5 mono-font">{pt.lng ? pt.lng.toFixed(6) : '-'}</td>
+                        <td className="p-2.5 mono-font text-amber-900 font-bold">{pt.dls || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
 
-              <div className="flex justify-end pt-2">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                {activeProject && (
+                  <button
+                    type="button"
+                    disabled={isSavingToProject}
+                    className="custom-btn amber-pro-btn text-xs font-extrabold px-4 py-2.5"
+                    onClick={handleSaveToProject}
+                  >
+                    <FolderPlus className="w-4 h-4 mr-1.5" />
+                    {isSavingToProject ? 'Saving...' : `Save ${parsedData.length} Points to ${activeProject.name}`}
+                  </button>
+                )}
+
                 <button
-                  className="pane-btn primary text-xs font-bold px-5 py-2.5 shadow-lg"
-                  onClick={handleImportToMap}
-                  style={{ background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#ffffff' }}
+                  type="button"
+                  className="custom-btn primary text-xs font-extrabold px-5 py-2.5"
+                  onClick={handlePlotOnMap}
                 >
-                  <MapPin className="w-4 h-4 mr-1.5 inline" /> Import & Plot {parsedData.length} Points on Map
+                  <MapPin className="w-4 h-4 mr-1.5" /> Plot All ({parsedData.length}) on Map
                 </button>
               </div>
             </div>

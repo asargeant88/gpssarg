@@ -2883,6 +2883,66 @@ body, html, #root {
   box-shadow: 0 1px 2px rgba(2, 132, 199, 0.06);
 }
 
+/* AUTH & FORM INPUT FIELD STYLES */
+.auth-modal-width {
+  max-width: 440px !important;
+  width: 100% !important;
+}
+
+.import-modal-width {
+  max-width: 680px !important;
+  width: 100% !important;
+}
+
+.custom-field-label {
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #475569;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.custom-input-relative {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.custom-input-icon {
+  position: absolute;
+  left: 12px;
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.custom-modal-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  color: #0f172a !important;
+  outline: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.custom-modal-input.with-icon {
+  padding-left: 40px !important;
+}
+
+.custom-modal-input:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+
 
 
 
