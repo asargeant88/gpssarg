@@ -121,35 +121,36 @@ print(response.json())`;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="batch-modal-content" style={{ width: '740px' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="flex items-center gap-2">
-            <div className="modal-icon-badge" style={{ background: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }}>
-              <Key className="w-5 h-5 text-amber-400" />
+      <div className="custom-modal-card converter-modal-width" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="custom-modal-header">
+          <div className="modal-header-left">
+            <div className="modal-icon-badge amber">
+              <Key className="w-5 h-5 text-amber" />
             </div>
             <div>
-              <h2 className="modal-title">Developer API Portal & Keys</h2>
-              <p className="modal-subtitle">Generate API keys linked to your subscription status.</p>
+              <h2 className="modal-header-title">Developer API Portal & Keys</h2>
+              <p className="modal-header-subtitle">Generate API keys linked to your subscription status.</p>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <button className="modal-close-icon-btn" onClick={onClose}>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto" style={{ maxHeight: '75vh' }}>
+        {/* Modal Body */}
+        <div className="custom-modal-body space-y-4">
           {subscriptionTier !== 'pro' ? (
-            <div className="p-5 bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/40 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 font-bold text-amber-300 text-sm">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                <span>Pro Subscription Required for API Access</span>
+            <div className="p-5 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+              <div className="flex items-center gap-2 font-extrabold text-amber-900 text-sm">
+                <Sparkles className="w-5 h-5 text-amber-600" />
+                <span>Pro Subscription Required for Developer API Access</span>
               </div>
-              <p className="text-xs text-amber-100/80">
+              <p className="text-xs text-amber-800 font-medium">
                 Developer API keys allow integration into GIS software, custom web applications, and python scripts. Upgrade to Pro ($15/mo) to unlock API keys.
               </p>
               <button
-                className="pane-btn primary full py-2.5 text-xs font-black"
-                style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#0f172a' }}
+                className="custom-btn amber-pro-btn px-5 py-2.5 text-xs"
                 onClick={() => {
                   onClose();
                   if (onOpenUpgradeModal) onOpenUpgradeModal();
@@ -160,61 +161,63 @@ print(response.json())`;
             </div>
           ) : (
             <>
-              {/* Newly Created Key Alert (Shown once) */}
+              {/* Newly Created Key Alert */}
               {createdRawKey && (
-                <div className="p-4 bg-emerald-950/60 border border-emerald-500/60 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-emerald-300 uppercase tracking-wide">API KEY GENERATED — SAVE THIS NOW</span>
-                    <button className="text-emerald-400 hover:text-white" onClick={() => setCreatedRawKey(null)}>
+                <div className="alert-box success flex-col items-start gap-2">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-black uppercase tracking-wide text-emerald-900">API KEY GENERATED — SAVE THIS SECRET KEY NOW</span>
+                    <button className="text-emerald-700 hover:text-emerald-950" onClick={() => setCreatedRawKey(null)}>
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <p className="text-[11px] text-emerald-200/80">
+                  <p className="text-xs text-emerald-800 font-medium">
                     This raw secret key is only displayed once. Please copy and store it securely.
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 w-full mt-1">
                     <input
                       type="text"
                       readOnly
                       value={createdRawKey}
-                      className="modal-input mono text-xs font-bold text-emerald-300 bg-black/60 border-emerald-500/40"
+                      className="custom-modal-input mono-font text-xs font-extrabold text-emerald-950 bg-white border-emerald-300"
                     />
                     <button
-                      className="pane-btn primary text-xs px-3 py-2 shrink-0 font-bold"
+                      className="custom-btn primary shrink-0 text-xs py-2 px-3"
                       onClick={handleCopyRawKey}
                     >
-                      {copiedKey ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4 mr-1 inline" />}
-                      {copiedKey ? 'Copied!' : 'Copy Key'}
+                      {copiedKey ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      <span>{copiedKey ? 'Copied!' : 'Copy Key'}</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Generate New Key Form */}
-              <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
-                <label className="field-label text-cyan-400">GENERATE NEW DEVELOPER API KEY</label>
-                {error && <div className="error-alert text-xs">{error}</div>}
+              <div className="settings-section-card">
+                <div className="section-card-title cyan">
+                  <Key className="w-4 h-4" /> Generate New Developer API Key
+                </div>
+                {error && <div className="alert-box danger">{error}</div>}
                 <form onSubmit={handleGenerateKey} className="flex gap-2">
                   <input
                     type="text"
-                    className="modal-input text-xs flex-1"
+                    className="custom-modal-input text-xs flex-1"
                     placeholder="Key Label (e.g. GIS Pipeline Worker, Mobile App)"
                     value={newKeyName}
                     onChange={(e) => setNewKeyName(e.target.value)}
                   />
-                  <button type="submit" disabled={loading} className="pane-btn primary text-xs shrink-0 px-4 font-bold">
-                    <Plus className="w-4 h-4 mr-1 inline" /> {loading ? 'Generating...' : 'Generate Key'}
+                  <button type="submit" disabled={loading} className="custom-btn primary text-xs shrink-0 px-4">
+                    <Plus className="w-4 h-4" /> {loading ? 'Generating...' : 'Generate Key'}
                   </button>
                 </form>
               </div>
 
               {/* Active API Keys List */}
-              <div className="space-y-3">
-                <label className="field-label text-slate-400">YOUR API KEYS ({keys.length})</label>
+              <div className="space-y-2">
+                <div className="card-title-label">YOUR API KEYS ({keys.length})</div>
                 {keys.length === 0 ? (
-                  <div className="empty-state py-6 bg-slate-900/40 border border-slate-800/60 rounded-xl">
-                    <Key className="w-8 h-8 text-slate-600 mb-2" />
-                    <span className="text-xs text-slate-400">No API keys created yet. Generate one above to start building integrations!</span>
+                  <div className="rhs-empty-list">
+                    <Key className="w-6 h-6 text-slate-400 mb-1" />
+                    <span>No API keys created yet. Generate one above to start building integrations!</span>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -223,17 +226,17 @@ print(response.json())`;
                       return (
                         <div
                           key={k.id}
-                          className="p-3 bg-slate-900/50 border border-slate-800 rounded-xl flex items-center justify-between gap-3"
+                          className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs"
                         >
                           <div className="truncate space-y-0.5">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-white">{k.name}</span>
-                              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${isExpired ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
+                              <span className="font-extrabold text-xs text-slate-900">{k.name}</span>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${isExpired ? 'bg-red-100 text-red-800 border border-red-300' : 'bg-emerald-100 text-emerald-900 border border-emerald-300'}`}>
                                 {isExpired ? 'EXPIRED / REVOKED' : 'ACTIVE'}
                               </span>
                             </div>
-                            <div className="text-xs mono text-cyan-400">{k.key_prefix}</div>
-                            <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                            <div className="text-xs mono-font font-bold text-cyan-800">{k.key_prefix}</div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-2 font-medium">
                               <span>Created: {new Date(k.created_at).toLocaleDateString()}</span>
                               <span>•</span>
                               <span className="flex items-center gap-1">
@@ -244,7 +247,7 @@ print(response.json())`;
                           </div>
 
                           <button
-                            className="p-1.5 text-slate-500 hover:text-red-400 rounded"
+                            className="point-icon-btn danger"
                             onClick={() => handleRevokeKey(k.id)}
                             title="Revoke Key"
                           >
@@ -258,17 +261,16 @@ print(response.json())`;
               </div>
 
               {/* Sample Code Integration Snippets */}
-              <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-3">
+              <div className="settings-section-card">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Code className="w-4 h-4 text-cyan-400" />
-                    <span className="text-xs font-bold text-slate-200 uppercase">API Code Snippets</span>
+                  <div className="section-card-title cyan">
+                    <Code className="w-4 h-4" /> API Code Snippets
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-1.5">
                     {['curl', 'js', 'python'].map((lang) => (
                       <button
                         key={lang}
-                        className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded transition-all ${activeSnippetTab === lang ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400 hover:text-white'}`}
+                        className={`snippet-tab-btn ${activeSnippetTab === lang ? 'active' : ''}`}
                         onClick={() => setActiveSnippetTab(lang)}
                       >
                         {lang}
@@ -277,21 +279,22 @@ print(response.json())`;
                   </div>
                 </div>
 
-                <div className="relative">
+                <div className="snippet-code-container">
                   <textarea
                     readOnly
                     value={getSampleSnippet()}
-                    className="modal-input mono text-xs bg-black/80 border-slate-800 text-cyan-300 p-3 h-28 resize-none"
+                    className="snippet-textarea mono-font"
                   />
                   <button
-                    className="absolute right-2 top-2 pane-btn secondary small text-[10px] py-1 px-2"
+                    className="snippet-copy-btn"
                     onClick={() => {
                       navigator.clipboard.writeText(getSampleSnippet());
                       setCopiedSnippet(true);
                       setTimeout(() => setCopiedSnippet(false), 2000);
                     }}
                   >
-                    {copiedSnippet ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedSnippet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedSnippet ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
               </div>

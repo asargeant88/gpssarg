@@ -8,107 +8,107 @@ export default function PhotoModal({ photo, onClose, onFlyTo }) {
   const coords = formatAllCoordinates(photo.lat, photo.lng);
 
   return (
-    <div className="photo-modal-backdrop" onClick={onClose}>
-      <div className="photo-modal-content" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="custom-modal-card converter-modal-width" onClick={(e) => e.stopPropagation()}>
         {/* Header Bar */}
-        <div className="photo-modal-header">
-          <div className="modal-title-box">
-            <Camera className="w-5 h-5 text-purple-400 mr-2.5" />
+        <div className="custom-modal-header">
+          <div className="modal-header-left">
+            <div className="modal-icon-badge cyan">
+              <Camera className="w-5 h-5 text-cyan" />
+            </div>
             <div>
-              <h3 className="modal-title-text">{photo.title || 'Geotagged Photo'}</h3>
-              <span className="modal-subtitle">{photo.filename || 'IMG_SPATIAL_EXIF.JPG'}</span>
+              <h2 className="modal-header-title">{photo.title || 'Geotagged Media Viewer'}</h2>
+              <p className="modal-header-subtitle">{photo.filename || 'IMG_SPATIAL_EXIF.JPG'}</p>
             </div>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
-            <X className="w-5 h-5" />
+          <button className="modal-close-icon-btn" onClick={onClose}>
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body Grid */}
-        <div className="photo-modal-body">
+        <div className="grid grid-cols-[1fr_300px] overflow-hidden max-h-[75vh] bg-white">
           {/* Main Photo Preview Area */}
-          <div className="photo-preview-container">
-            <img src={photo.url} alt={photo.title} className="photo-modal-img" />
+          <div className="photo-preview-container flex items-center justify-center p-4 bg-slate-950 overflow-hidden">
+            <img src={photo.url} alt={photo.title} className="photo-modal-img max-h-[60vh] max-w-full object-contain rounded-xl shadow-lg" />
           </div>
 
           {/* Sidebar Metadata & Spatial Info Panel */}
-          <div className="photo-metadata-panel">
-            <h4 className="meta-section-title">Geospatial EXIF Data</h4>
+          <div className="p-4 bg-slate-50 border-l border-slate-200 overflow-y-auto space-y-4">
+            <div className="card-title-label">GEOSPATIAL EXIF DATA</div>
 
-            <div className="meta-card">
-              <div className="meta-item">
-                <MapPin className="meta-icon text-cyan-400" />
-                <div className="meta-details">
-                  <span className="meta-label">Lat / Lng (DD)</span>
-                  <span className="meta-val mono">{coords.dd.formatted}</span>
+            <div className="space-y-2 p-3.5 bg-white border border-slate-200 rounded-xl shadow-2xs">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-cyan-600 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500">Lat / Lng (DD)</div>
+                  <div className="text-xs font-mono font-bold text-slate-900">{coords.dd.formatted}</div>
                 </div>
               </div>
 
-              <div className="meta-item">
-                <Compass className="meta-icon text-emerald-400" />
-                <div className="meta-details">
-                  <span className="meta-label">UTM Grid</span>
-                  <span className="meta-val mono">{coords.utm.formatted}</span>
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500">UTM Grid</div>
+                  <div className="text-xs font-mono font-bold text-slate-900">{coords.utm.formatted}</div>
                 </div>
               </div>
 
-              <div className="meta-item">
-                <Compass className="meta-icon text-violet-400" />
-                <div className="meta-details">
-                  <span className="meta-label">MGRS Zone</span>
-                  <span className="meta-val mono">{coords.mgrs}</span>
+              <div className="flex items-center gap-2">
+                <Compass className="w-4 h-4 text-indigo-600 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500">MGRS Code</div>
+                  <div className="text-xs font-mono font-bold text-slate-900">{coords.mgrs}</div>
                 </div>
               </div>
 
-              <div className="meta-item">
-                <Calendar className="meta-icon text-amber-400" />
-                <div className="meta-details">
-                  <span className="meta-label">Date Taken</span>
-                  <span className="meta-val">{photo.date || '2026-08-13 14:22:08 UTC'}</span>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500">Date Captured</div>
+                  <div className="text-xs font-bold text-slate-900">{photo.date || '2026-08-13 14:22:08 UTC'}</div>
                 </div>
               </div>
             </div>
 
-            <h4 className="meta-section-title mt-4">Camera & Elevation</h4>
-            <div className="meta-card">
-              <div className="meta-grid-2">
-                <div>
-                  <span className="meta-label">Altitude</span>
-                  <span className="meta-val">{photo.altitude || '142m MSL'}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Heading</span>
-                  <span className="meta-val">{photo.heading || '245° SW'}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Device</span>
-                  <span className="meta-val">{photo.camera || 'SargGeo Mobile'}</span>
-                </div>
-                <div>
-                  <span className="meta-label">Accuracy</span>
-                  <span className="meta-val">± 1.2 meters</span>
-                </div>
+            <div className="card-title-label">CAMERA & ELEVATION</div>
+            <div className="p-3.5 bg-white border border-slate-200 rounded-xl grid grid-cols-2 gap-2 text-xs shadow-2xs">
+              <div>
+                <div className="text-[10px] font-bold text-slate-500">Altitude</div>
+                <div className="font-bold text-slate-900">{photo.altitude || '142m MSL'}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-500">Heading</div>
+                <div className="font-bold text-slate-900">{photo.heading || '245° SW'}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-500">Device</div>
+                <div className="font-bold text-slate-900 truncate">{photo.camera || 'SargGeo Mobile'}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-500">Accuracy</div>
+                <div className="font-bold text-slate-900">± 1.2 meters</div>
               </div>
             </div>
 
-            <div className="modal-actions-box">
+            <div className="space-y-2 pt-2">
               <button
-                className="modal-action-btn primary"
+                className="custom-btn primary full text-xs py-2"
                 onClick={() => {
                   onFlyTo(photo.lat, photo.lng);
                   onClose();
                 }}
               >
-                <MapPin className="w-4 h-4 mr-2" /> Zoom Map To Location
+                <MapPin className="w-4 h-4" /> Zoom Map To Location
               </button>
               <a
                 href={photo.url}
                 download={photo.filename || 'geotagged_photo.jpg'}
-                className="modal-action-btn secondary"
+                className="custom-btn secondary full text-xs py-2 justify-center"
                 target="_blank"
                 rel="noreferrer"
               >
-                <Download className="w-4 h-4 mr-2" /> Download Original
+                <Download className="w-4 h-4" /> Download Original
               </a>
             </div>
           </div>

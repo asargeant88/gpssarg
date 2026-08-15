@@ -12,6 +12,7 @@ import ApiKeyModal from './components/ApiKeyModal';
 import UserSettingsModal from './components/UserSettingsModal';
 import ConverterModal from './components/ConverterModal';
 import JsonImportModal from './components/JsonImportModal';
+import RightProjectPanel from './components/RightProjectPanel';
 import { Globe } from 'lucide-react';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
@@ -36,6 +37,7 @@ export default function App() {
   // Hosted Cloud Projects state
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
+  const [projectPoints, setProjectPoints] = useState([]);
 
   // Map states
   const [basemap, setBasemap] = useState('dark');
@@ -139,24 +141,96 @@ export default function App() {
   // Select Project & load waypoints from DB
   const handleSelectProject = (project) => {
     setActiveProject(project);
-    fetch(`/api/projects/${project.id}/waypoints`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.waypoints) {
-          setWaypoints(
-            data.waypoints.map((w) => ({
-              id: w.id,
-              title: w.title,
-              notes: w.notes,
-              lat: w.lat,
-              lng: w.lng,
-              color: w.color || '#38bdf8',
-              category: w.category || 'Project Point'
-            }))
-          );
+    if (project && project.id) {
+      fetchProjectPoints(project.id);
+    } else {
+      setProjectPoints([]);
+    }
+  };
+
+  useEffect(() => {
+    if (activeProject && activeProject.id) {
+      fetchProjectPoints(activeProject.id);
+    }
+  }, [activeProject]);
+
+  const fetchProjectPoints = async (projectId) => {
+    const token = localStorage.getItem('sarggeo_token');
+    try {
+      const res = await fetch(`/api/projects/${projectId}/waypoints`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (data.waypoints) {
+        setProjectPoints(data.waypoints);
+        setWaypoints(
+          data.waypoints.map((w) => ({
+            id: w.id,
+            title: w.title,
+            notes: w.notes,
+            lat: w.lat,
+            lng: w.lng,
+            color: w.color || '#38bdf8',
+            category: w.category || 'Project Point'
+          }))
+        );
+      }
+    } catch (e) {}
+  };
+
+  const handleAddPointToProject = async (pointData) => {
+    if (!activeProject) {
+      setIsProjectsModalOpen(true);
+      return;
+    }
+
+    const token = localStorage.getItem('sarggeo_token');
+    if (token) {
+      try {
+        const res = await fetch(`/api/projects/${activeProject.id}/waypoints`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(pointData)
+        });
+        const data = await res.json();
+        if (data.waypoint) {
+          setProjectPoints((prev) => [data.waypoint, ...prev]);
+          setWaypoints((prev) => [
+            {
+              id: data.waypoint.id,
+              title: data.waypoint.title,
+              notes: data.waypoint.notes,
+              lat: data.waypoint.lat,
+              lng: data.waypoint.lng,
+              color: '#38bdf8',
+              category: 'Project Point'
+            },
+            ...prev
+          ]);
         }
-      })
-      .catch(() => {});
+      } catch (e) {}
+    } else {
+      const newPt = { ...pointData, id: Date.now() };
+      setProjectPoints((prev) => [newPt, ...prev]);
+    }
+  };
+
+  const handleDeleteProjectPoint = async (pointId) => {
+    if (!activeProject) return;
+    const token = localStorage.getItem('sarggeo_token');
+    if (token) {
+      try {
+        await fetch(`/api/projects/${activeProject.id}/waypoints/${pointId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (e) {}
+    }
+    setProjectPoints((prev) => prev.filter((p) => p.id !== pointId));
+    setWaypoints((prev) => prev.filter((p) => p.id !== pointId));
   };
 
   // Track Conversion Usage & Enforce 3 Test Limit
@@ -431,6 +505,17 @@ export default function App() {
             elevation={clickElevation}
           />
         </div>
+
+        {/* Right-Hand Side Hosted Project Panel */}
+        <RightProjectPanel
+          activeProject={activeProject}
+          projectPoints={projectPoints}
+          onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
+          onAddPointToProject={handleAddPointToProject}
+          onDeleteProjectPoint={handleDeleteProjectPoint}
+          onFlyTo={handleFlyTo}
+          inspectedPoint={inspectedPoint}
+        />
       </div>
 
       {/* Geotagged Photo Modal */}
