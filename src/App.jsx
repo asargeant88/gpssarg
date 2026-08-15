@@ -13,6 +13,7 @@ import UserSettingsModal from './components/UserSettingsModal';
 import ConverterModal from './components/ConverterModal';
 import JsonImportModal from './components/JsonImportModal';
 import RightProjectPanel from './components/RightProjectPanel';
+import ProjectSpreadsheetModal from './components/ProjectSpreadsheetModal';
 import { Globe } from 'lucide-react';
 import { formatAllCoordinates } from './utils/coordinateConverter';
 
@@ -33,6 +34,7 @@ export default function App() {
   const [isUserSettingsModalOpen, setIsUserSettingsModalOpen] = useState(false);
   const [isConverterModalOpen, setIsConverterModalOpen] = useState(false);
   const [isJsonImportModalOpen, setIsJsonImportModalOpen] = useState(false);
+  const [isSpreadsheetModalOpen, setIsSpreadsheetModalOpen] = useState(false);
 
   // Hosted Cloud Projects state
   const [projects, setProjects] = useState([]);
@@ -511,12 +513,24 @@ export default function App() {
           activeProject={activeProject}
           projectPoints={projectPoints}
           onOpenProjectsModal={() => setIsProjectsModalOpen(true)}
+          onOpenSpreadsheet={() => setIsSpreadsheetModalOpen(true)}
           onAddPointToProject={handleAddPointToProject}
           onDeleteProjectPoint={handleDeleteProjectPoint}
           onFlyTo={handleFlyTo}
           inspectedPoint={inspectedPoint}
         />
       </div>
+
+      {/* Project Spreadsheet Grid Modal */}
+      <ProjectSpreadsheetModal
+        isOpen={isSpreadsheetModalOpen}
+        onClose={() => setIsSpreadsheetModalOpen(false)}
+        activeProject={activeProject}
+        projectPoints={projectPoints}
+        onFlyTo={handleFlyTo}
+        onAddPointToProject={handleAddPointToProject}
+        onDeleteProjectPoint={handleDeleteProjectPoint}
+      />
 
       {/* Geotagged Photo Modal */}
       <PhotoModal

@@ -23,6 +23,7 @@ export default function RightProjectPanel({
   activeProject,
   projectPoints = [],
   onOpenProjectsModal,
+  onOpenSpreadsheet,
   onAddPointToProject,
   onDeleteProjectPoint,
   onFlyTo,
@@ -90,10 +91,21 @@ export default function RightProjectPanel({
                   <span className="rhs-project-sub">{projectPoints.length} Points Saved</span>
                 </div>
               </div>
-              <button className="rhs-change-project-btn" onClick={onOpenProjectsModal}>
-                Switch
-              </button>
+              <div className="flex items-center gap-1">
+                <button className="rhs-change-project-btn" onClick={onOpenProjectsModal}>
+                  Switch
+                </button>
+              </div>
             </div>
+
+            {activeProject && (
+              <button
+                className="custom-btn primary full text-xs py-2 mt-2.5 justify-center shadow-2xs font-extrabold"
+                onClick={onOpenSpreadsheet}
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Open Project Spreadsheet
+              </button>
+            )}
           </div>
 
           {/* Body Content */}
